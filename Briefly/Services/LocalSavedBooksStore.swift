@@ -67,6 +67,10 @@ struct LocalSavedBooksStore {
         return value > 0 ? value : 30
     }
 
+    func hasReadingGoal(userID: UUID) -> Bool {
+        UserDefaults.standard.object(forKey: key(readingGoalKey, userID: userID)) != nil
+    }
+
     func setReadingGoalMinutes(_ minutes: Int, userID: UUID) {
         UserDefaults.standard.set(max(minutes, 1), forKey: key(readingGoalKey, userID: userID))
     }

@@ -17,9 +17,15 @@ struct SavedBooksService {
         async let readingSummary = fetchReadingSummary(baseURL: baseURL, session: session)
         async let goal = fetchReadingGoal(baseURL: baseURL, session: session)
         var summary = try await readingSummary
-        summary.dailyGoalMinutes = try await goal
+        if let goal = try await goal {
+            summary.dailyGoalMinutes = goal
+            summary.hasCustomGoal = true
+            localStore.setReadingGoalMinutes(goal, userID: session.userID)
+        } else {
+            summary.dailyGoalMinutes = 30
+            summary.hasCustomGoal = false
+        }
         localStore.setReadingSeconds(summary.todaySeconds, userID: session.userID)
-        localStore.setReadingGoalMinutes(summary.dailyGoalMinutes, userID: session.userID)
         return (
             records.filter(\.isSaved).map { $0.book() },
             Set(records.filter(\.isDownloaded).map(\.bookID)),
@@ -158,7 +164,7 @@ struct SavedBooksService {
         return summary
     }
 
-    private func fetchReadingGoal(baseURL: URL, session: UserSession) async throws -> Int {
+    private func fetchReadingGoal(baseURL: URL, session: UserSession) async throws -> Int? {
         var components = URLComponents(url: baseURL.appending(path: "/rest/v1/user_reading_goals"), resolvingAgainstBaseURL: false)
         components?.queryItems = [
             .init(name: "select", value: "daily_goal_minutes"),
@@ -166,22 +172,22 @@ struct SavedBooksService {
             .init(name: "limit", value: "1")
         ]
 
-        guard let url = components?.url else { return localStore.readingGoalMinutes(userID: session.userID) }
+        guard let url = components?.url else { return localReadingGoal(session: session) }
         var request = authedRequest(url: url, session: session)
         request.httpMethod = "GET"
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
-            return localStore.readingGoalMinutes(userID: session.userID)
+            return localReadingGoal(session: session)
         }
         guard (200...299).contains(http.statusCode) else {
             if isMissingTable(data: data, statusCode: http.statusCode) {
-                return localStore.readingGoalMinutes(userID: session.userID)
+                return localReadingGoal(session: session)
             }
             throw APIError.server("Could not load reading goal.")
         }
 
-        return (try JSONDecoder.supabase.decode([ReadingGoalResponse].self, from: data).first?.dailyGoalMinutes) ?? localStore.readingGoalMinutes(userID: session.userID)
+        return try JSONDecoder.supabase.decode([ReadingGoalResponse].self, from: data).first?.dailyGoalMinutes
     }
 
     private func upsert(book: BookItem, isSaved: Bool, isDownloaded: Bool, session: UserSession) async throws {
@@ -254,8 +260,14 @@ struct SavedBooksService {
             weekSeconds: localStore.readingSeconds(userID: session.userID),
             monthSeconds: localStore.readingSeconds(userID: session.userID),
             overallSeconds: localStore.readingSeconds(userID: session.userID),
-            dailyGoalMinutes: localStore.readingGoalMinutes(userID: session.userID)
+            dailyGoalMinutes: localStore.readingGoalMinutes(userID: session.userID),
+            hasCustomGoal: localStore.hasReadingGoal(userID: session.userID)
         )
+    }
+
+    private func localReadingGoal(session: UserSession) -> Int? {
+        guard localStore.hasReadingGoal(userID: session.userID) else { return nil }
+        return localStore.readingGoalMinutes(userID: session.userID)
     }
 
     private func isMissingTable(data: Data, statusCode: Int) -> Bool {

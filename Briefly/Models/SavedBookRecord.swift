@@ -121,6 +121,7 @@ struct ReadingSummary: Equatable {
     var monthSeconds: Int = 0
     var overallSeconds: Int = 0
     var dailyGoalMinutes: Int = 30
+    var hasCustomGoal: Bool = false
 
     var todayMinutes: Int { minutes(todaySeconds) }
     var weekMinutes: Int { minutes(weekSeconds) }

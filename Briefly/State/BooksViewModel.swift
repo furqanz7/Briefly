@@ -140,6 +140,7 @@ final class BooksViewModel: ObservableObject {
         guard let session else { return }
         let clamped = min(max(minutes, 1), 1440)
         readingSummary.dailyGoalMinutes = clamped
+        readingSummary.hasCustomGoal = true
         store.setReadingGoalMinutes(clamped, userID: session.userID)
         Task {
             try? await savedService.setReadingGoalMinutes(clamped, session: session)
@@ -167,7 +168,8 @@ final class BooksViewModel: ObservableObject {
                 weekSeconds: store.readingSeconds(userID: session.userID),
                 monthSeconds: store.readingSeconds(userID: session.userID),
                 overallSeconds: store.readingSeconds(userID: session.userID),
-                dailyGoalMinutes: store.readingGoalMinutes(userID: session.userID)
+                dailyGoalMinutes: store.readingGoalMinutes(userID: session.userID),
+                hasCustomGoal: store.hasReadingGoal(userID: session.userID)
             )
         }
     }

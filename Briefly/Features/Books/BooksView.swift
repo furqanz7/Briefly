@@ -174,7 +174,7 @@ struct BooksView: View {
                             action: { isGoalEditorPresented = true }
                         )
                     } label: {
-                        Text("\(viewModel.readingGoalMinutes) min goal")
+                        Text(readingGoalLabel)
                             .font(.system(size: 13, weight: .heavy))
                             .foregroundStyle(BrieflyTheme.primaryText.opacity(0.86))
                             .padding(.horizontal, 12)
@@ -525,6 +525,10 @@ struct BooksView: View {
         let hours = minutes / 60
         let remainder = minutes % 60
         return remainder == 0 ? "\(hours)h" : "\(hours)h \(remainder)m"
+    }
+
+    private var readingGoalLabel: String {
+        viewModel.readingSummary.hasCustomGoal ? "\(viewModel.readingGoalMinutes) min goal" : "Tap to set goal"
     }
 }
 
