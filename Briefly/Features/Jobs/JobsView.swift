@@ -92,7 +92,7 @@ struct JobsView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.82)
 
-                Text("\(viewModel.deckJobs.count) matches  •  \(viewModel.selectedCountry.rawValue)  •  \(viewModel.selectedFilter.rawValue)")
+                Text(jobHeaderSubtitle)
                     .font(.system(size: 14, weight: .heavy))
                     .foregroundStyle(BrieflyTheme.secondary(colorScheme))
                     .lineLimit(1)
@@ -119,6 +119,14 @@ struct JobsView: View {
                 .accessibilityLabel("Refresh jobs")
             }
         }
+    }
+
+    private var jobHeaderSubtitle: String {
+        if viewModel.isLoading {
+            return "Finding matches  •  \(viewModel.selectedCountry.rawValue)  •  \(viewModel.selectedFilter.rawValue)"
+        }
+
+        return "\(viewModel.deckJobs.count) matches  •  \(viewModel.selectedCountry.rawValue)  •  \(viewModel.selectedFilter.rawValue)"
     }
 
     private var compactControls: some View {
@@ -276,8 +284,9 @@ struct JobsView: View {
     @ViewBuilder
     private func deckSection(width: CGFloat, height: CGFloat) -> some View {
         if viewModel.isLoading {
-            JobsMessageCard(icon: "briefcase.fill", title: "Loading matches", message: "Finding roles that fit your profile.")
-                .frame(height: height)
+            let cardHeight = min(max(430, height - 128), 462)
+            JobsLoadingDeck(cardWidth: width, cardHeight: cardHeight)
+                .frame(height: height, alignment: .top)
         } else if let errorMessage = viewModel.errorMessage {
             JobsMessageCard(
                 icon: "magnifyingglass",
@@ -673,6 +682,187 @@ private struct JobCardBackPlate: View {
             .offset(y: yOffset)
             .shadow(color: .black.opacity(0.10), radius: 10, x: 0, y: 8)
             .accessibilityHidden(true)
+    }
+}
+
+private struct JobsLoadingDeck: View {
+    let cardWidth: CGFloat
+    let cardHeight: CGFloat
+
+    var body: some View {
+        VStack(spacing: 15) {
+            ZStack {
+                ForEach([2, 1], id: \.self) { depth in
+                    JobCardBackPlate(cardWidth: cardWidth, cardHeight: cardHeight, depth: depth)
+                }
+
+                VStack(alignment: .leading, spacing: 22) {
+                    HStack(alignment: .center, spacing: 15) {
+                        ZStack {
+                            Circle()
+                                .fill(BrieflyTheme.actionGradient)
+                                .frame(width: 58, height: 58)
+                                .shadow(color: BrieflyTheme.accent.opacity(0.24), radius: 18, x: 0, y: 8)
+
+                            Image(systemName: "briefcase.fill")
+                                .font(.system(size: 25, weight: .heavy))
+                                .foregroundStyle(BrieflyTheme.primaryText)
+                        }
+
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Loading matches")
+                                .font(.system(size: 24, weight: .heavy))
+                                .foregroundStyle(BrieflyTheme.primaryText)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.82)
+
+                            Text("Finding roles that fit your profile")
+                                .font(.system(size: 14, weight: .heavy))
+                                .foregroundStyle(BrieflyTheme.secondaryText)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.78)
+                        }
+
+                        Spacer(minLength: 0)
+
+                        ProgressView()
+                            .tint(BrieflyTheme.primaryText)
+                            .scaleEffect(1.08)
+                    }
+
+                    VStack(alignment: .leading, spacing: 13) {
+                        JobsSkeletonLine(widthFactor: 0.72, height: 15)
+                        JobsSkeletonLine(widthFactor: 0.94, height: 28)
+                        JobsSkeletonLine(widthFactor: 0.82, height: 14)
+                    }
+                    .padding(.top, 10)
+
+                    VStack(spacing: 10) {
+                        JobsSkeletonLine(widthFactor: 0.96, height: 12)
+                        JobsSkeletonLine(widthFactor: 0.68, height: 12)
+                        JobsSkeletonLine(widthFactor: 0.88, height: 12)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    HStack(spacing: 8) {
+                        JobsLoadingPill(icon: "sparkles", text: "Best fit")
+                        JobsLoadingPill(icon: "globe", text: "Market")
+                        JobsLoadingPill(icon: "person.crop.circle.fill", text: "Profile")
+                    }
+                }
+                .padding(24)
+                .frame(width: cardWidth, height: cardHeight)
+                .background {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(BrieflyTheme.cardBase.opacity(0.94))
+                        .overlay {
+                            LinearGradient(
+                                colors: [
+                                    BrieflyTheme.accent.opacity(0.20),
+                                    BrieflyTheme.accentBlue.opacity(0.10),
+                                    BrieflyTheme.backgroundBase.opacity(0.16)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                        }
+                        .overlay(alignment: .topTrailing) {
+                            Circle()
+                                .fill(BrieflyTheme.accent.opacity(0.16))
+                                .blur(radius: 34)
+                                .frame(width: 130, height: 130)
+                                .offset(x: 34, y: -38)
+                        }
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .stroke(BrieflyTheme.divider.opacity(0.86), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.26), radius: 22, x: 0, y: 14)
+            }
+            .frame(height: cardHeight + 34)
+
+            HStack(spacing: 10) {
+                JobsLoadingStatus(icon: "slider.horizontal.3", title: "Filtering")
+                JobsLoadingStatus(icon: "checkmark.seal.fill", title: "Scoring")
+            }
+            .padding(.horizontal, 2)
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+    }
+}
+
+private struct JobsSkeletonLine: View {
+    let widthFactor: CGFloat
+    let height: CGFloat
+
+    var body: some View {
+        GeometryReader { proxy in
+            RoundedRectangle(cornerRadius: height / 2, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            BrieflyTheme.elevatedCard.opacity(0.95),
+                            BrieflyTheme.secondaryText.opacity(0.13),
+                            BrieflyTheme.elevatedCard.opacity(0.72)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: proxy.size.width * widthFactor, height: height)
+        }
+        .frame(height: height)
+    }
+}
+
+private struct JobsLoadingPill: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .heavy))
+            Text(text)
+                .font(.system(size: 12, weight: .heavy))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .foregroundStyle(BrieflyTheme.secondaryText)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(BrieflyTheme.elevatedCard.opacity(0.76))
+        .clipShape(Capsule())
+        .overlay {
+            Capsule()
+                .stroke(BrieflyTheme.divider.opacity(0.66), lineWidth: 1)
+        }
+    }
+}
+
+private struct JobsLoadingStatus: View {
+    let icon: String
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .heavy))
+            Text(title)
+                .font(.system(size: 13, weight: .heavy))
+        }
+        .foregroundStyle(BrieflyTheme.secondaryText)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(BrieflyTheme.cardBase.opacity(0.82))
+        .clipShape(Capsule())
+        .overlay {
+            Capsule()
+                .stroke(BrieflyTheme.divider.opacity(0.72), lineWidth: 1)
+        }
     }
 }
 
