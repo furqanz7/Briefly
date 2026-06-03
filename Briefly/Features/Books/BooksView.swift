@@ -166,7 +166,7 @@ struct BooksView: View {
 
                 Spacer()
 
-                HStack(spacing: 8) {
+                HStack(spacing: 7) {
                     Button {
                         requireAccount(
                             title: "Sign in to set a goal",
@@ -174,16 +174,23 @@ struct BooksView: View {
                             action: { isGoalEditorPresented = true }
                         )
                     } label: {
-                        Text(readingGoalLabel)
-                            .font(.system(size: 13, weight: .heavy))
-                            .foregroundStyle(BrieflyTheme.primaryText.opacity(0.86))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(BrieflyTheme.accent.opacity(0.16))
-                            .clipShape(Capsule())
-                            .overlay {
-                                Capsule().stroke(BrieflyTheme.accent.opacity(0.24), lineWidth: 1)
-                            }
+                        HStack(spacing: 6) {
+                            Image(systemName: viewModel.readingSummary.hasCustomGoal ? "target" : "plus")
+                                .font(.system(size: 11, weight: .heavy))
+                            Text(readingGoalLabel)
+                                .lineLimit(1)
+                        }
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(viewModel.readingSummary.hasCustomGoal ? BrieflyTheme.primaryText.opacity(0.86) : BrieflyTheme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(viewModel.readingSummary.hasCustomGoal ? BrieflyTheme.elevatedCard.opacity(0.9) : BrieflyTheme.accent.opacity(0.12))
+                        .fixedSize(horizontal: true, vertical: false)
+                        .clipShape(Capsule())
+                        .overlay {
+                            Capsule()
+                                .stroke(viewModel.readingSummary.hasCustomGoal ? BrieflyTheme.divider.opacity(0.75) : BrieflyTheme.accent.opacity(0.26), lineWidth: 1)
+                        }
                     }
                     .buttonStyle(.plain)
 
@@ -195,11 +202,14 @@ struct BooksView: View {
                         )
                     } label: {
                         Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 13, weight: .heavy))
-                            .foregroundStyle(BrieflyTheme.primaryText.opacity(0.9))
-                            .frame(width: 34, height: 34)
-                            .background(BrieflyTheme.elevatedCard.opacity(0.92))
-                            .clipShape(Circle())
+                            .font(.system(size: 12, weight: .heavy))
+                            .foregroundStyle(BrieflyTheme.secondaryText)
+                            .frame(width: 32, height: 32)
+                            .background(BrieflyTheme.elevatedCard.opacity(0.78))
+                            .clipShape(Capsule())
+                            .overlay {
+                                Circle().stroke(BrieflyTheme.divider.opacity(0.65), lineWidth: 1)
+                            }
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Reset daily reading")
@@ -528,7 +538,7 @@ struct BooksView: View {
     }
 
     private var readingGoalLabel: String {
-        viewModel.readingSummary.hasCustomGoal ? "\(viewModel.readingGoalMinutes) min goal" : "Tap to set goal"
+        viewModel.readingSummary.hasCustomGoal ? "\(viewModel.readingGoalMinutes)m goal" : "Set goal"
     }
 }
 
@@ -1221,37 +1231,36 @@ private struct ReadingGoalEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(BrieflyTheme.accent.opacity(0.18))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "target")
-                        .font(.system(size: 19, weight: .heavy))
-                        .foregroundStyle(BrieflyTheme.accent)
-                }
+            VStack(alignment: .leading, spacing: 7) {
+                Text("Reading Goal")
+                    .font(.system(size: 30, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.primaryText)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Reading Goal")
-                        .font(.system(size: 28, weight: .heavy))
-                        .foregroundStyle(BrieflyTheme.primaryText)
-
-                    Text("Tracked automatically while the reader or preview is open.")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(BrieflyTheme.secondaryText)
-                        .lineSpacing(2)
-                }
+                Text("Briefly tracks time while the reader or preview is open.")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(BrieflyTheme.secondaryText)
+                    .lineSpacing(2)
             }
 
-            HStack(alignment: .lastTextBaseline, spacing: 8) {
-                Text("\(draftGoal)")
-                    .font(.system(size: 54, weight: .heavy))
-                    .foregroundStyle(BrieflyTheme.primaryText)
-                    .contentTransition(.numericText())
-                Text("min / day")
-                    .font(.system(size: 17, weight: .heavy))
-                    .foregroundStyle(BrieflyTheme.secondaryText)
-                Spacer()
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Daily target")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(BrieflyTheme.secondaryText)
+                        .textCase(.uppercase)
+                    HStack(alignment: .lastTextBaseline, spacing: 6) {
+                        Text("\(draftGoal)")
+                            .font(.system(size: 36, weight: .heavy))
+                            .foregroundStyle(BrieflyTheme.primaryText)
+                            .contentTransition(.numericText())
+                        Text("min")
+                            .font(.system(size: 16, weight: .heavy))
+                            .foregroundStyle(BrieflyTheme.secondaryText)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
                 HStack(spacing: 0) {
                     Button {
                         draftGoal = max(5, draftGoal - 5)
@@ -1274,8 +1283,15 @@ private struct ReadingGoalEditor: View {
                     }
                 }
                 .foregroundStyle(BrieflyTheme.primaryText)
-                .background(BrieflyTheme.elevatedCard)
+                .background(BrieflyTheme.elevatedCard.opacity(0.9))
                 .clipShape(Capsule())
+            }
+            .padding(16)
+            .background(BrieflyTheme.cardBase.opacity(0.88))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(BrieflyTheme.divider.opacity(0.7), lineWidth: 1)
             }
 
             HStack(spacing: 8) {
@@ -1313,8 +1329,8 @@ private struct ReadingGoalEditor: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 22)
-        .padding(.top, 20)
+        .padding(.horizontal, 20)
+        .padding(.top, 18)
         .padding(.bottom, 18)
         .background(BrieflyTheme.premiumBackground.ignoresSafeArea())
     }
