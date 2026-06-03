@@ -307,7 +307,7 @@ struct JobsView: View {
                                 onSave: {
                                     requireAccount(
                                         title: "Sign in to save jobs",
-                                        message: "Sign in before saving roles so Briefly can keep your job list tied to your account.",
+                                        message: "Sign in before saving roles so Briefly can unlock your job list and tracker.",
                                         action: viewModel.saveCurrent
                                     )
                                 },
@@ -350,7 +350,7 @@ struct JobsView: View {
                     JobsActionButton(icon: "checkmark", tint: .green) {
                         requireAccount(
                             title: "Sign in to save jobs",
-                            message: "Sign in before saving roles so Briefly can keep your job list tied to your account."
+                            message: "Sign in before saving roles so Briefly can unlock your job list and tracker."
                         ) {
                             withAnimation(.spring(response: 0.36, dampingFraction: 0.86)) {
                                 viewModel.saveCurrent()
@@ -839,7 +839,7 @@ private struct JobDetailView: View {
                     Button {
                         requireAccount(
                             title: "Sign in to save jobs",
-                            message: "Sign in before saving roles so Briefly can keep your job list tied to your account.",
+                            message: "Sign in before saving roles so Briefly can unlock your job list and tracker.",
                             action: onToggleSave
                         )
                     } label: {

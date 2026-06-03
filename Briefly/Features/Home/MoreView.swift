@@ -116,7 +116,7 @@ private struct AppliedJobsView: View {
             if appState.session == nil {
                 AccountGateView(
                     title: "Sign in to track applications",
-                    message: "Applied jobs are tied to your account so they stay available after you close the app.",
+                    message: "Applied jobs are stored on this device so you can track applications while using Briefly.",
                     buttonTitle: "Sign In or Create Account"
                 )
             } else if appliedJobs.isEmpty {

@@ -69,7 +69,7 @@ struct ProfileView: View {
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(BrieflyTheme.text(colorScheme))
 
-                Text("Signed in to keep saved stories, books, jobs, and widgets synced.")
+                Text("Signed in to keep saved stories synced and manage your local books and jobs.")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.62))
             }
