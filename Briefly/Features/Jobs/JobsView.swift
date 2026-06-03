@@ -903,13 +903,13 @@ private struct JobDetailView: View {
             JobDetailMetric(icon: "location.fill", title: "Location", value: job.location)
             JobDetailMetric(icon: "clock.fill", title: "Posted", value: job.postedDisplayText)
             JobDetailMetric(icon: "briefcase.fill", title: "Mode", value: job.workMode.rawValue)
-            JobDetailMetric(icon: "link", title: "Apply", value: job.applyURL == nil ? "Unavailable" : "Ready")
+            JobDetailMetric(icon: "link", title: "Apply", value: job.browserApplyURL == nil ? "Unavailable" : "Ready")
         }
     }
 
     @ViewBuilder
     private var applyButton: some View {
-        if let applyURL = job.applyURL {
+        if let applyURL = job.browserApplyURL {
             Button {
                 requireAccount(
                     title: "Sign in to apply",

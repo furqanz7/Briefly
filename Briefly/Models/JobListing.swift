@@ -24,6 +24,18 @@ struct JobListing: Identifiable, Equatable, Codable {
 }
 
 extension JobListing {
+    var browserApplyURL: URL? {
+        guard
+            let applyURL,
+            let scheme = applyURL.scheme?.lowercased(),
+            scheme == "http" || scheme == "https"
+        else {
+            return nil
+        }
+
+        return applyURL
+    }
+
     var postedDisplayText: String {
         let trimmed = postedAt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "Recently" }
