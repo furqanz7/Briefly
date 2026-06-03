@@ -95,14 +95,12 @@ struct BooksView: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(30)
             }
-            .sheet(isPresented: $isGoalEditorPresented) {
+            .fullScreenCover(isPresented: $isGoalEditorPresented) {
                 ReadingGoalEditor(
                     goalMinutes: viewModel.readingGoalMinutes,
                     onSave: { viewModel.updateReadingGoal(minutes: $0, session: appState.session) }
                 )
-                .presentationDetents([.height(360)])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(30)
+                .presentationBackground(.clear)
             }
         }
         .background {
@@ -1230,106 +1228,181 @@ private struct ReadingGoalEditor: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Reading Goal")
-                    .font(.system(size: 30, weight: .heavy))
-                    .foregroundStyle(BrieflyTheme.primaryText)
+        ZStack(alignment: .bottom) {
+            Color.black.opacity(0.58)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    dismiss()
+                }
 
-                Spacer()
-            }
+            VStack(spacing: 0) {
+                Capsule()
+                    .fill(BrieflyTheme.secondaryText.opacity(0.5))
+                    .frame(width: 46, height: 5)
+                    .padding(.top, 10)
+                    .padding(.bottom, 18)
 
-            HStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Daily target")
-                        .font(.system(size: 12, weight: .heavy))
-                        .foregroundStyle(BrieflyTheme.secondaryText)
-                        .textCase(.uppercase)
-                    HStack(alignment: .lastTextBaseline, spacing: 6) {
-                        Text("\(draftGoal)")
-                            .font(.system(size: 36, weight: .heavy))
+                VStack(alignment: .leading, spacing: 15) {
+                    HStack(alignment: .center) {
+                        Text("Reading Goal")
+                            .font(.system(size: 30, weight: .heavy))
                             .foregroundStyle(BrieflyTheme.primaryText)
-                            .contentTransition(.numericText())
-                        Text("min")
-                            .font(.system(size: 15, weight: .heavy))
-                            .foregroundStyle(BrieflyTheme.secondaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+
+                        Spacer()
+
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 13, weight: .heavy))
+                                .foregroundStyle(BrieflyTheme.secondaryText)
+                                .frame(width: 38, height: 38)
+                                .background(BrieflyTheme.elevatedCard.opacity(0.88))
+                                .clipShape(Circle())
+                                .overlay {
+                                    Circle()
+                                        .stroke(BrieflyTheme.divider.opacity(0.74), lineWidth: 1)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Close reading goal")
                     }
-                }
 
-                Spacer(minLength: 0)
+                    targetControl
 
-                HStack(spacing: 0) {
-                    Button {
-                        draftGoal = max(5, draftGoal - 5)
-                    } label: {
-                        Image(systemName: "minus")
-                            .font(.system(size: 17, weight: .heavy))
-                            .frame(width: 48, height: 44)
-                    }
-
-                    Divider()
-                        .frame(height: 24)
-                        .overlay(BrieflyTheme.divider)
+                    presetRow
 
                     Button {
-                        draftGoal = min(240, draftGoal + 5)
+                        onSave(draftGoal)
+                        dismiss()
                     } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 17, weight: .heavy))
-                            .frame(width: 48, height: 44)
-                    }
-                }
-                .foregroundStyle(BrieflyTheme.primaryText)
-                .background(BrieflyTheme.elevatedCard.opacity(0.9))
-                .clipShape(Capsule())
-            }
-            .padding(16)
-            .background(BrieflyTheme.cardBase.opacity(0.88))
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(BrieflyTheme.divider.opacity(0.7), lineWidth: 1)
-            }
-
-            HStack(spacing: 8) {
-                ForEach([15, 30, 45, 60], id: \.self) { minutes in
-                    Button {
-                        draftGoal = minutes
-                    } label: {
-                        Text("\(minutes)")
-                            .font(.system(size: 13, weight: .heavy))
-                            .foregroundStyle(draftGoal == minutes ? BrieflyTheme.primaryText : BrieflyTheme.secondaryText)
+                        Text("Save Goal")
+                            .font(.system(size: 18, weight: .heavy))
+                            .foregroundStyle(BrieflyTheme.primaryText)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 11)
-                            .background(draftGoal == minutes ? BrieflyTheme.accent.opacity(0.24) : BrieflyTheme.elevatedCard.opacity(0.82))
-                            .clipShape(Capsule())
-                            .overlay {
-                                Capsule()
-                                    .stroke(draftGoal == minutes ? BrieflyTheme.accent.opacity(0.42) : BrieflyTheme.divider.opacity(0.65), lineWidth: 1)
-                            }
+                            .padding(.vertical, 16)
+                            .background(BrieflyTheme.actionGradient)
+                            .clipShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 18)
+            }
+            .background {
+                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                    .fill(BrieflyTheme.backgroundBase)
+                    .overlay {
+                        LinearGradient(
+                            colors: [
+                                BrieflyTheme.accent.opacity(0.24),
+                                BrieflyTheme.accentBlue.opacity(0.12),
+                                BrieflyTheme.backgroundBase.opacity(0.98)
+                            ],
+                            startPoint: .topTrailing,
+                            endPoint: .bottomLeading
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+                    }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                    .stroke(BrieflyTheme.divider.opacity(0.9), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.48), radius: 30, x: 0, y: -12)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 14)
+        }
+        .ignoresSafeArea()
+    }
+
+    private var targetControl: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Daily target")
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.secondaryText.opacity(0.9))
+                    .textCase(.uppercase)
+
+                HStack(alignment: .lastTextBaseline, spacing: 7) {
+                    Text("\(draftGoal)")
+                        .font(.system(size: 44, weight: .heavy))
+                        .foregroundStyle(BrieflyTheme.primaryText)
+                        .contentTransition(.numericText())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+
+                    Text("min")
+                        .font(.system(size: 17, weight: .heavy))
+                        .foregroundStyle(BrieflyTheme.secondaryText)
+                }
             }
 
-            Button {
-                onSave(draftGoal)
-                dismiss()
-            } label: {
-                Text("Save Goal")
-                    .font(.system(size: 17, weight: .heavy))
-                    .foregroundStyle(BrieflyTheme.primaryText)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(BrieflyTheme.actionGradient)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            Spacer(minLength: 0)
+
+            HStack(spacing: 0) {
+                Button {
+                    draftGoal = max(5, draftGoal - 5)
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 17, weight: .heavy))
+                        .frame(width: 48, height: 44)
+                }
+
+                Divider()
+                    .frame(height: 24)
+                    .overlay(BrieflyTheme.divider)
+
+                Button {
+                    draftGoal = min(240, draftGoal + 5)
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .heavy))
+                        .frame(width: 48, height: 44)
+                }
             }
-            .buttonStyle(.plain)
+            .foregroundStyle(BrieflyTheme.primaryText)
+            .background(BrieflyTheme.elevatedCard.opacity(0.9))
+            .clipShape(Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(BrieflyTheme.divider.opacity(0.68), lineWidth: 1)
+            }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 20)
-        .background(BrieflyTheme.premiumBackground.ignoresSafeArea())
+        .padding(16)
+        .background(BrieflyTheme.cardBase.opacity(0.88))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(BrieflyTheme.divider.opacity(0.78), lineWidth: 1)
+        }
+    }
+
+    private var presetRow: some View {
+        HStack(spacing: 8) {
+            ForEach([15, 30, 45, 60], id: \.self) { minutes in
+                let isSelected = draftGoal == minutes
+
+                Button {
+                    draftGoal = minutes
+                } label: {
+                    Text("\(minutes)")
+                        .font(.system(size: 14, weight: .heavy))
+                        .foregroundStyle(isSelected ? BrieflyTheme.primaryText : BrieflyTheme.secondaryText)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(isSelected ? BrieflyTheme.accent.opacity(0.28) : BrieflyTheme.elevatedCard.opacity(0.82))
+                        .clipShape(Capsule())
+                        .overlay {
+                            Capsule()
+                                .stroke(isSelected ? BrieflyTheme.accent.opacity(0.5) : BrieflyTheme.divider.opacity(0.65), lineWidth: 1)
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 
