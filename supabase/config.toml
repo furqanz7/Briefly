@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "Layman"
+project_id = "Briefly"
 
 [api]
 enabled = true
@@ -133,6 +133,21 @@ enabled = false
 max_namespaces = 5
 max_tables = 10
 max_catalogs = 2
+
+[functions.delete-account]
+verify_jwt = false
+
+[functions.live-scores]
+verify_jwt = false
+
+[functions.market-data]
+verify_jwt = false
+
+[functions.jobs-data]
+verify_jwt = false
+
+[functions.books-data]
+verify_jwt = false
 
 # Analytics Buckets is available to Supabase Pro plan.
 # [storage.analytics.buckets.my-warehouse]

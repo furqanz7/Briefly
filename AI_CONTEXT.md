@@ -1,8 +1,8 @@
-# Layman AI Context
+# Briefly AI Context
 
 ## Product
 
-Layman is a warm, simple iOS news reader for business, tech, and startup stories. The tone is casual, short, and readable by non-experts.
+Briefly is a warm, simple iOS news reader for business, tech, and startup stories. The tone is casual, short, and readable by non-experts.
 
 ## Design Rules
 

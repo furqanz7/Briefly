@@ -1,5 +1,7 @@
 DerivedData/
+.DerivedData/
 Layman/Secrets.plist
+Briefly/Secrets.plist
 .DS_Store
 build.log
 assignment.pdf
@@ -13,3 +15,4 @@ xcuserdata/
 Layman.xcodeproj/xcuserdata/
 Layman.xcodeproj/project.xcworkspace/xcuserdata/
 supabase/.temp/
+website/
