@@ -100,7 +100,7 @@ struct BooksView: View {
                     goalMinutes: viewModel.readingGoalMinutes,
                     onSave: { viewModel.updateReadingGoal(minutes: $0, session: appState.session) }
                 )
-                .presentationDetents([.height(300)])
+                .presentationDetents([.height(340)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(30)
             }
@@ -154,12 +154,13 @@ struct BooksView: View {
     private var readingTracker: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Daily reading")
-                        .font(.system(size: 13, weight: .heavy))
-                        .foregroundStyle(BrieflyTheme.secondaryText)
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(BrieflyTheme.secondaryText.opacity(0.92))
+                        .textCase(.uppercase)
                     Text(formatDuration(minutes: viewModel.readingSummary.todayMinutes))
-                        .font(.system(size: 30, weight: .heavy))
+                        .font(.system(size: 34, weight: .heavy))
                         .foregroundStyle(BrieflyTheme.primaryText)
                 }
 
@@ -175,11 +176,14 @@ struct BooksView: View {
                     } label: {
                         Text("\(viewModel.readingGoalMinutes) min goal")
                             .font(.system(size: 13, weight: .heavy))
-                            .foregroundStyle(BrieflyTheme.secondaryText)
+                            .foregroundStyle(BrieflyTheme.primaryText.opacity(0.86))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(BrieflyTheme.elevatedCard)
+                            .background(BrieflyTheme.accent.opacity(0.16))
                             .clipShape(Capsule())
+                            .overlay {
+                                Capsule().stroke(BrieflyTheme.accent.opacity(0.24), lineWidth: 1)
+                            }
                     }
                     .buttonStyle(.plain)
 
@@ -192,9 +196,9 @@ struct BooksView: View {
                     } label: {
                         Image(systemName: "arrow.counterclockwise")
                             .font(.system(size: 13, weight: .heavy))
-                            .foregroundStyle(BrieflyTheme.primaryText)
+                            .foregroundStyle(BrieflyTheme.primaryText.opacity(0.9))
                             .frame(width: 34, height: 34)
-                            .background(BrieflyTheme.elevatedCard)
+                            .background(BrieflyTheme.elevatedCard.opacity(0.92))
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
@@ -205,7 +209,7 @@ struct BooksView: View {
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(BrieflyTheme.elevatedCard)
+                        .fill(BrieflyTheme.elevatedCard.opacity(0.78))
                     Capsule()
                         .fill(BrieflyTheme.actionGradient)
                         .frame(width: proxy.size.width * viewModel.readingProgress)
@@ -222,10 +226,10 @@ struct BooksView: View {
         .padding(18)
         .background {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(BrieflyTheme.cardBase)
+                .fill(BrieflyTheme.cardBase.opacity(0.96))
                 .overlay {
                     LinearGradient(
-                        colors: [BrieflyTheme.accent.opacity(0.20), .clear],
+                        colors: [BrieflyTheme.accent.opacity(0.22), BrieflyTheme.accentBlue.opacity(0.08), .clear],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -1160,10 +1164,11 @@ private struct ReadingStatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.system(size: 11, weight: .heavy))
-                .foregroundStyle(BrieflyTheme.secondaryText)
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(BrieflyTheme.secondaryText.opacity(0.86))
+                .textCase(.uppercase)
             Text(value)
-                .font(.system(size: 15, weight: .heavy))
+                .font(.system(size: 16, weight: .heavy))
                 .foregroundStyle(BrieflyTheme.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
@@ -1171,8 +1176,12 @@ private struct ReadingStatTile: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 11)
-        .background(BrieflyTheme.elevatedCard)
+        .background(BrieflyTheme.elevatedCard.opacity(0.82))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(BrieflyTheme.divider.opacity(0.7), lineWidth: 1)
+        }
     }
 }
 
@@ -1207,26 +1216,83 @@ private struct ReadingGoalEditor: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Reading Goal")
-                .font(.system(size: 28, weight: .heavy))
-                .foregroundStyle(BrieflyTheme.primaryText)
-
-            Text("Set your daily target. Briefly tracks time automatically while the reader or provider preview is open.")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(BrieflyTheme.secondaryText)
-                .lineSpacing(3)
-
-            Stepper(value: $draftGoal, in: 5...240, step: 5) {
-                HStack {
-                    Text("Daily goal")
-                        .font(.system(size: 16, weight: .heavy))
-                    Spacer()
-                    Text("\(draftGoal) min")
-                        .font(.system(size: 18, weight: .heavy))
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(BrieflyTheme.accent.opacity(0.18))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "target")
+                        .font(.system(size: 19, weight: .heavy))
                         .foregroundStyle(BrieflyTheme.accent)
                 }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Reading Goal")
+                        .font(.system(size: 28, weight: .heavy))
+                        .foregroundStyle(BrieflyTheme.primaryText)
+
+                    Text("Tracked automatically while the reader or preview is open.")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(BrieflyTheme.secondaryText)
+                        .lineSpacing(2)
+                }
+            }
+
+            HStack(alignment: .lastTextBaseline, spacing: 8) {
+                Text("\(draftGoal)")
+                    .font(.system(size: 54, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.primaryText)
+                    .contentTransition(.numericText())
+                Text("min / day")
+                    .font(.system(size: 17, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.secondaryText)
+                Spacer()
+                HStack(spacing: 0) {
+                    Button {
+                        draftGoal = max(5, draftGoal - 5)
+                    } label: {
+                        Image(systemName: "minus")
+                            .font(.system(size: 17, weight: .heavy))
+                            .frame(width: 48, height: 44)
+                    }
+
+                    Divider()
+                        .frame(height: 24)
+                        .overlay(BrieflyTheme.divider)
+
+                    Button {
+                        draftGoal = min(240, draftGoal + 5)
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 17, weight: .heavy))
+                            .frame(width: 48, height: 44)
+                    }
+                }
                 .foregroundStyle(BrieflyTheme.primaryText)
+                .background(BrieflyTheme.elevatedCard)
+                .clipShape(Capsule())
+            }
+
+            HStack(spacing: 8) {
+                ForEach([15, 30, 45, 60], id: \.self) { minutes in
+                    Button {
+                        draftGoal = minutes
+                    } label: {
+                        Text("\(minutes)")
+                            .font(.system(size: 13, weight: .heavy))
+                            .foregroundStyle(draftGoal == minutes ? BrieflyTheme.primaryText : BrieflyTheme.secondaryText)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(draftGoal == minutes ? BrieflyTheme.accent.opacity(0.24) : BrieflyTheme.elevatedCard.opacity(0.82))
+                            .clipShape(Capsule())
+                            .overlay {
+                                Capsule()
+                                    .stroke(draftGoal == minutes ? BrieflyTheme.accent.opacity(0.42) : BrieflyTheme.divider.opacity(0.65), lineWidth: 1)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
             }
 
             Button {
@@ -1237,13 +1303,15 @@ private struct ReadingGoalEditor: View {
                     .font(.system(size: 17, weight: .heavy))
                     .foregroundStyle(BrieflyTheme.primaryText)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                    .padding(.vertical, 15)
                     .background(BrieflyTheme.actionGradient)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
             .buttonStyle(.plain)
         }
-        .padding(22)
+        .padding(.horizontal, 22)
+        .padding(.top, 20)
+        .padding(.bottom, 18)
         .background(BrieflyTheme.premiumBackground.ignoresSafeArea())
     }
 }
