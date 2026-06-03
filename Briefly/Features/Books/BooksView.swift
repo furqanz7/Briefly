@@ -25,6 +25,7 @@ struct BooksView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var authPrompt: AuthPrompt?
     @State private var libraryFilter: LibraryFilter = .all
+    @State private var isGoalEditorPresented = false
 
     var body: some View {
         NavigationStack {
@@ -59,9 +60,13 @@ struct BooksView: View {
             .navigationBarHidden(true)
             .refreshable {
                 await viewModel.search()
+                await viewModel.loadAccountBackedLibrary(session: appState.session)
             }
             .task {
-                await viewModel.load()
+                await viewModel.load(session: appState.session)
+            }
+            .onChange(of: appState.session?.userID) {
+                Task { await viewModel.loadAccountBackedLibrary(session: appState.session) }
             }
             .sheet(item: $viewModel.selectedBook) { book in
                 BookDetailView(
@@ -70,10 +75,11 @@ struct BooksView: View {
                     isDownloaded: viewModel.downloadedIDs.contains(book.id),
                     readingMinutesToday: viewModel.readingMinutesToday,
                     readingGoalMinutes: viewModel.readingGoalMinutes,
-                    onToggleSave: { viewModel.toggleSave(book) },
-                    onDownload: { viewModel.markDownloaded(book) },
-                    onAddReading: { viewModel.addReadingMinutes($0) },
-                    onResetReading: { viewModel.resetReadingMinutes() }
+                    readingSummary: viewModel.readingSummary,
+                    onToggleSave: { viewModel.toggleSave(book, session: appState.session) },
+                    onDownload: { viewModel.markDownloaded(book, session: appState.session) },
+                    onAddReadingSeconds: { viewModel.addReadingSeconds($0, session: appState.session) },
+                    onResetReading: { viewModel.resetReadingMinutes(session: appState.session) }
                 )
                 .environmentObject(appState)
             }
@@ -86,6 +92,15 @@ struct BooksView: View {
                 .environmentObject(appState)
                 .padding(20)
                 .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(30)
+            }
+            .sheet(isPresented: $isGoalEditorPresented) {
+                ReadingGoalEditor(
+                    goalMinutes: viewModel.readingGoalMinutes,
+                    onSave: { viewModel.updateReadingGoal(minutes: $0, session: appState.session) }
+                )
+                .presentationDetents([.height(300)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(30)
             }
@@ -143,7 +158,7 @@ struct BooksView: View {
                     Text("Daily reading")
                         .font(.system(size: 13, weight: .heavy))
                         .foregroundStyle(BrieflyTheme.secondaryText)
-                    Text("\(viewModel.readingMinutesToday) min")
+                    Text(formatDuration(minutes: viewModel.readingSummary.todayMinutes))
                         .font(.system(size: 30, weight: .heavy))
                         .foregroundStyle(BrieflyTheme.primaryText)
                 }
@@ -151,19 +166,28 @@ struct BooksView: View {
                 Spacer()
 
                 HStack(spacing: 8) {
-                    Text("\(viewModel.readingGoalMinutes) min goal")
-                        .font(.system(size: 13, weight: .heavy))
-                        .foregroundStyle(BrieflyTheme.secondaryText)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(BrieflyTheme.elevatedCard)
-                        .clipShape(Capsule())
+                    Button {
+                        requireAccount(
+                            title: "Sign in to set a goal",
+                            message: "Sign in before setting a reading goal so Briefly can keep it with your account.",
+                            action: { isGoalEditorPresented = true }
+                        )
+                    } label: {
+                        Text("\(viewModel.readingGoalMinutes) min goal")
+                            .font(.system(size: 13, weight: .heavy))
+                            .foregroundStyle(BrieflyTheme.secondaryText)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(BrieflyTheme.elevatedCard)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
 
                     Button {
                         requireAccount(
                             title: "Sign in to track reading",
                             message: "Sign in before tracking reading time so Briefly can keep your progress with your account.",
-                            action: viewModel.resetReadingMinutes
+                            action: { viewModel.resetReadingMinutes(session: appState.session) }
                         )
                     } label: {
                         Image(systemName: "arrow.counterclockwise")
@@ -190,9 +214,9 @@ struct BooksView: View {
             .frame(height: 9)
 
             HStack(spacing: 10) {
-                ReadingMinuteButton(title: "+5") { viewModel.addReadingMinutes(5) }
-                ReadingMinuteButton(title: "+15") { viewModel.addReadingMinutes(15) }
-                ReadingMinuteButton(title: "+30") { viewModel.addReadingMinutes(30) }
+                ReadingStatTile(title: "Week", value: formatDuration(minutes: viewModel.readingSummary.weekMinutes))
+                ReadingStatTile(title: "Month", value: formatDuration(minutes: viewModel.readingSummary.monthMinutes))
+                ReadingStatTile(title: "Overall", value: formatDuration(minutes: viewModel.readingSummary.overallMinutes))
             }
         }
         .padding(18)
@@ -393,8 +417,8 @@ struct BooksView: View {
                             isSaved: viewModel.savedBooks.contains(book),
                             isDownloaded: viewModel.downloadedIDs.contains(book.id),
                             onOpen: { viewModel.selectedBook = book },
-                            onSave: { viewModel.toggleSave(book) },
-                            onDownload: { viewModel.markDownloaded(book) }
+                            onSave: { viewModel.toggleSave(book, session: appState.session) },
+                            onDownload: { viewModel.markDownloaded(book, session: appState.session) }
                         )
                     }
                 }
@@ -491,6 +515,13 @@ struct BooksView: View {
         case .classics: return "text.book.closed.fill"
         }
     }
+
+    private func formatDuration(minutes: Int) -> String {
+        if minutes < 60 { return "\(minutes)m" }
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        return remainder == 0 ? "\(hours)h" : "\(hours)h \(remainder)m"
+    }
 }
 
 private struct BookTile: View {
@@ -570,9 +601,10 @@ private struct BookDetailView: View {
     let isDownloaded: Bool
     let readingMinutesToday: Int
     let readingGoalMinutes: Int
+    let readingSummary: ReadingSummary
     let onToggleSave: () -> Void
     let onDownload: () -> Void
-    let onAddReading: (Int) -> Void
+    let onAddReadingSeconds: (Int) -> Void
     let onResetReading: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -622,30 +654,9 @@ private struct BookDetailView: View {
                             .foregroundStyle(BrieflyTheme.secondaryText)
 
                         HStack(spacing: 10) {
-                            ReadingMinuteButton(title: "+5") {
-                                requireAccount(
-                                    title: "Sign in to track reading",
-                                    message: "Sign in before tracking reading time so Briefly can keep your progress with your account."
-                                ) {
-                                    onAddReading(5)
-                                }
-                            }
-                            ReadingMinuteButton(title: "+15") {
-                                requireAccount(
-                                    title: "Sign in to track reading",
-                                    message: "Sign in before tracking reading time so Briefly can keep your progress with your account."
-                                ) {
-                                    onAddReading(15)
-                                }
-                            }
-                            ReadingMinuteButton(title: "+30") {
-                                requireAccount(
-                                    title: "Sign in to track reading",
-                                    message: "Sign in before tracking reading time so Briefly can keep your progress with your account."
-                                ) {
-                                    onAddReading(30)
-                                }
-                            }
+                            ReadingStatTile(title: "Week", value: formatDuration(minutes: readingSummary.weekMinutes))
+                            ReadingStatTile(title: "Month", value: formatDuration(minutes: readingSummary.monthMinutes))
+                            ReadingStatTile(title: "Overall", value: formatDuration(minutes: readingSummary.overallMinutes))
                             ReadingIconButton(systemName: "arrow.counterclockwise") {
                                 requireAccount(
                                     title: "Sign in to track reading",
@@ -691,11 +702,11 @@ private struct BookDetailView: View {
             )
         ) {
             if let browserURL {
-                BookSafariSheet(url: browserURL)
+                ReadingTimedSafariSheet(url: browserURL, onReadingEnded: onAddReadingSeconds)
             }
         }
         .fullScreenCover(isPresented: $isReaderPresented) {
-            BookReaderView(book: book, onAddReading: onAddReading)
+            BookReaderView(book: book, onReadingEnded: onAddReadingSeconds)
         }
         .sheet(item: $authPrompt) { prompt in
             AccountGateView(
@@ -793,15 +804,23 @@ private struct BookDetailView: View {
 
         action()
     }
+
+    private func formatDuration(minutes: Int) -> String {
+        if minutes < 60 { return "\(minutes)m" }
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        return remainder == 0 ? "\(hours)h" : "\(hours)h \(remainder)m"
+    }
 }
 
 private struct BookReaderView: View {
     let book: BookItem
-    let onAddReading: (Int) -> Void
+    let onReadingEnded: (Int) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var fontScale: CGFloat = 1
     @State private var showWebReader = true
+    @State private var readingStartedAt = Date()
 
     private var readerURL: URL? {
         book.downloadURL ?? book.previewURL
@@ -857,6 +876,15 @@ private struct BookReaderView: View {
                     .ignoresSafeArea()
             }
             .toolbar(.hidden, for: .navigationBar)
+        }
+        .onAppear {
+            readingStartedAt = Date()
+        }
+        .onDisappear {
+            let elapsed = Int(Date().timeIntervalSince(readingStartedAt))
+            if elapsed >= 5 {
+                onReadingEnded(elapsed)
+            }
         }
     }
 
@@ -923,21 +951,13 @@ private struct BookReaderView: View {
             }
             .buttonStyle(.plain)
 
-            Button {
-                onAddReading(5)
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "clock.fill")
-                    Text("+5 min")
-                }
-                .font(.system(size: 14, weight: .heavy))
-                .foregroundStyle(BrieflyTheme.primaryText)
+            Text("Time is tracked automatically while this reader is open.")
+                .font(.system(size: 13, weight: .heavy))
+                .foregroundStyle(BrieflyTheme.secondaryText)
                 .frame(maxWidth: .infinity)
                 .frame(height: 48)
-                .background(BrieflyTheme.actionGradient)
+                .background(BrieflyTheme.elevatedCard)
                 .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
@@ -983,6 +1003,25 @@ private struct ReaderControlLabel: View {
         .frame(width: 72, height: 48)
         .background(BrieflyTheme.elevatedCard)
         .clipShape(Capsule())
+    }
+}
+
+private struct ReadingTimedSafariSheet: View {
+    let url: URL
+    let onReadingEnded: (Int) -> Void
+    @State private var readingStartedAt = Date()
+
+    var body: some View {
+        BookSafariSheet(url: url)
+            .onAppear {
+                readingStartedAt = Date()
+            }
+            .onDisappear {
+                let elapsed = Int(Date().timeIntervalSince(readingStartedAt))
+                if elapsed >= 5 {
+                    onReadingEnded(elapsed)
+                }
+            }
     }
 }
 
@@ -1114,21 +1153,26 @@ private struct BookActionLabel: View {
     }
 }
 
-private struct ReadingMinuteButton: View {
+private struct ReadingStatTile: View {
     let title: String
-    let action: () -> Void
+    let value: String
 
     var body: some View {
-        Button(action: action) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.system(size: 13, weight: .heavy))
+                .font(.system(size: 11, weight: .heavy))
+                .foregroundStyle(BrieflyTheme.secondaryText)
+            Text(value)
+                .font(.system(size: 15, weight: .heavy))
                 .foregroundStyle(BrieflyTheme.primaryText)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(BrieflyTheme.elevatedCard)
-                .clipShape(Capsule())
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(BrieflyTheme.elevatedCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -1146,6 +1190,61 @@ private struct ReadingIconButton: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct ReadingGoalEditor: View {
+    let goalMinutes: Int
+    let onSave: (Int) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var draftGoal: Int
+
+    init(goalMinutes: Int, onSave: @escaping (Int) -> Void) {
+        self.goalMinutes = goalMinutes
+        self.onSave = onSave
+        _draftGoal = State(initialValue: goalMinutes)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Reading Goal")
+                .font(.system(size: 28, weight: .heavy))
+                .foregroundStyle(BrieflyTheme.primaryText)
+
+            Text("Set your daily target. Briefly tracks time automatically while the reader or provider preview is open.")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(BrieflyTheme.secondaryText)
+                .lineSpacing(3)
+
+            Stepper(value: $draftGoal, in: 5...240, step: 5) {
+                HStack {
+                    Text("Daily goal")
+                        .font(.system(size: 16, weight: .heavy))
+                    Spacer()
+                    Text("\(draftGoal) min")
+                        .font(.system(size: 18, weight: .heavy))
+                        .foregroundStyle(BrieflyTheme.accent)
+                }
+                .foregroundStyle(BrieflyTheme.primaryText)
+            }
+
+            Button {
+                onSave(draftGoal)
+                dismiss()
+            } label: {
+                Text("Save Goal")
+                    .font(.system(size: 17, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.primaryText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(BrieflyTheme.actionGradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(22)
+        .background(BrieflyTheme.premiumBackground.ignoresSafeArea())
     }
 }
 

@@ -33,10 +33,13 @@ struct JobsView: View {
             }
             .navigationBarHidden(true)
             .refreshable {
-                await viewModel.refresh()
+                await viewModel.refresh(session: appState.session)
             }
             .task {
-                await viewModel.load()
+                await viewModel.load(session: appState.session)
+            }
+            .onChange(of: appState.session?.userID) {
+                Task { await viewModel.refresh(session: appState.session) }
             }
             .sheet(item: $viewModel.selectedJob) { job in
                 JobDetailView(
@@ -46,12 +49,12 @@ struct JobsView: View {
                     isLoadingDetail: viewModel.isLoadingDetail,
                     onToggleSave: {
                         if viewModel.savedJobs.contains(job) {
-                            viewModel.removeSaved(job)
+                            Task { await viewModel.removeSaved(job, session: appState.session) }
                         } else {
-                            viewModel.save(job)
+                            Task { await viewModel.save(job, session: appState.session) }
                         }
                     },
-                    onMarkApplied: { viewModel.markApplied(job) }
+                    onMarkApplied: { Task { await viewModel.markApplied(job, session: appState.session) } }
                 )
                 .environmentObject(appState)
             }
@@ -108,7 +111,7 @@ struct JobsView: View {
                 .accessibilityLabel("Job filters")
 
                 Button {
-                    Task { await viewModel.search() }
+                    Task { await viewModel.search(session: appState.session) }
                 } label: {
                     JobsIconButton(icon: "arrow.clockwise", isLoading: viewModel.isLoading)
                 }
@@ -135,7 +138,7 @@ struct JobsView: View {
                 .foregroundStyle(BrieflyTheme.primaryText)
                 .tint(BrieflyTheme.accent)
                 .onSubmit {
-                    Task { await viewModel.search() }
+                    Task { await viewModel.search(session: appState.session) }
                 }
 
             if !viewModel.searchText.isEmpty {
@@ -191,7 +194,7 @@ struct JobsView: View {
 
                     Button {
                         showControls = false
-                        Task { await viewModel.search() }
+                        Task { await viewModel.search(session: appState.session) }
                     } label: {
                         Text("Apply")
                             .font(.system(size: 18, weight: .heavy))
@@ -307,8 +310,8 @@ struct JobsView: View {
                                 onSave: {
                                     requireAccount(
                                         title: "Sign in to save jobs",
-                                        message: "Sign in before saving roles so Briefly can unlock your job list and tracker.",
-                                        action: viewModel.saveCurrent
+                                        message: "Sign in before saving roles so Briefly can restore your job list on any device.",
+                                        action: { viewModel.saveCurrent(session: appState.session) }
                                     )
                                 },
                                 onPass: {
@@ -350,10 +353,10 @@ struct JobsView: View {
                     JobsActionButton(icon: "checkmark", tint: .green) {
                         requireAccount(
                             title: "Sign in to save jobs",
-                            message: "Sign in before saving roles so Briefly can unlock your job list and tracker."
+                            message: "Sign in before saving roles so Briefly can restore your job list on any device."
                         ) {
                             withAnimation(.spring(response: 0.36, dampingFraction: 0.86)) {
-                                viewModel.saveCurrent()
+                                viewModel.saveCurrent(session: appState.session)
                             }
                         }
                     }
@@ -380,7 +383,7 @@ struct JobsView: View {
                             SavedJobRow(
                                 job: job,
                                 onOpen: { viewModel.open(job) },
-                                onRemove: { viewModel.removeSaved(job) }
+                                onRemove: { Task { await viewModel.removeSaved(job, session: appState.session) } }
                             )
                         }
                     }
@@ -839,7 +842,7 @@ private struct JobDetailView: View {
                     Button {
                         requireAccount(
                             title: "Sign in to save jobs",
-                            message: "Sign in before saving roles so Briefly can unlock your job list and tracker.",
+                            message: "Sign in before saving roles so Briefly can restore your job list on any device.",
                             action: onToggleSave
                         )
                     } label: {

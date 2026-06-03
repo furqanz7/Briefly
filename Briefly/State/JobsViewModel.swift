@@ -57,14 +57,18 @@ final class JobsViewModel: ObservableObject {
 
     private let service: JobsProviding
     private let savedStore: LocalSavedJobsStore
+    private let savedService: SavedJobsService
     private let defaultQuery = "ios developer remote"
     let quickSearches = ["iOS", "Backend", "Product", "Design", "Remote"]
 
-    init(service: JobsProviding = JobsService(), savedStore: LocalSavedJobsStore = LocalSavedJobsStore()) {
+    init(
+        service: JobsProviding = JobsService(),
+        savedStore: LocalSavedJobsStore = LocalSavedJobsStore(),
+        savedService: SavedJobsService = SavedJobsService()
+    ) {
         self.service = service
         self.savedStore = savedStore
-        self.savedJobs = savedStore.fetch()
-        self.appliedJobs = savedStore.fetchApplied()
+        self.savedService = savedService
     }
 
     var deckJobs: [JobListing] {
@@ -96,11 +100,12 @@ final class JobsViewModel: ObservableObject {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func load() async {
+    func load(session: UserSession?) async {
         guard jobs.isEmpty else { return }
         isLoading = true
         errorMessage = nil
         providerMessage = nil
+        await loadAccountBackedJobs(session: session)
         do {
             jobs = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
         } catch {
@@ -109,17 +114,18 @@ final class JobsViewModel: ObservableObject {
         isLoading = false
     }
 
-    func refresh() async {
+    func refresh(session: UserSession?) async {
         jobs = []
         passedJobs = []
-        await load()
+        await load(session: session)
     }
 
-    func search() async {
+    func search(session: UserSession?) async {
         isLoading = true
         errorMessage = nil
         providerMessage = nil
         passedJobs = []
+        await loadAccountBackedJobs(session: session)
         do {
             jobs = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
         } catch {
@@ -135,15 +141,24 @@ final class JobsViewModel: ObservableObject {
         }
     }
 
-    func saveCurrent() {
+    func saveCurrent(session: UserSession?) {
         guard let job = currentJob else { return }
-        save(job)
+        Task { await save(job, session: session) }
     }
 
-    func save(_ job: JobListing) {
+    func save(_ job: JobListing, session: UserSession?) async {
+        guard let session else {
+            providerMessage = "Sign in before saving roles."
+            return
+        }
         savedJobs.removeAll { $0.id == job.id }
         savedJobs.insert(job, at: 0)
-        savedStore.save(job)
+        savedStore.save(job, userID: session.userID)
+        do {
+            try await savedService.save(job: job, session: session)
+        } catch {
+            providerMessage = "Could not sync this saved job yet."
+        }
     }
 
     func passCurrent() {
@@ -160,15 +175,33 @@ final class JobsViewModel: ObservableObject {
         }
     }
 
-    func removeSaved(_ job: JobListing) {
+    func removeSaved(_ job: JobListing, session: UserSession?) async {
+        guard let session else {
+            providerMessage = "Sign in before editing saved roles."
+            return
+        }
         savedJobs.removeAll { $0.id == job.id }
-        savedStore.delete(job)
+        savedStore.delete(job, userID: session.userID)
+        do {
+            try await savedService.deleteSaved(job: job, session: session)
+        } catch {
+            providerMessage = "Could not sync this saved job yet."
+        }
     }
 
-    func markApplied(_ job: JobListing) {
+    func markApplied(_ job: JobListing, session: UserSession?) async {
+        guard let session else {
+            providerMessage = "Sign in before marking jobs as applied."
+            return
+        }
         appliedJobs.removeAll { $0.id == job.id }
         appliedJobs.insert(job, at: 0)
-        savedStore.markApplied(job)
+        savedStore.markApplied(job, userID: session.userID)
+        do {
+            try await savedService.markApplied(job: job, session: session)
+        } catch {
+            providerMessage = "Could not sync this applied job yet."
+        }
         NotificationCenter.default.post(name: AppNotifications.appliedJobsDidChange, object: nil)
     }
 
@@ -203,11 +236,28 @@ final class JobsViewModel: ObservableObject {
         }
         if let index = savedJobs.firstIndex(where: { $0.id == job.id }) {
             savedJobs[index] = job
-            savedStore.update(job)
         }
         if let index = appliedJobs.firstIndex(where: { $0.id == job.id }) {
             appliedJobs[index] = job
-            savedStore.updateApplied(job)
+        }
+    }
+
+    private func loadAccountBackedJobs(session: UserSession?) async {
+        guard let session else {
+            savedJobs = []
+            appliedJobs = []
+            return
+        }
+
+        do {
+            async let saved = savedService.fetchSavedJobs(session: session)
+            async let applied = savedService.fetchAppliedJobs(session: session)
+            savedJobs = try await saved
+            appliedJobs = try await applied
+            NotificationCenter.default.post(name: AppNotifications.appliedJobsDidChange, object: nil)
+        } catch {
+            savedJobs = savedStore.fetch(userID: session.userID)
+            appliedJobs = savedStore.fetchApplied(userID: session.userID)
         }
     }
 

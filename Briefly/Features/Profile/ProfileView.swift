@@ -51,7 +51,7 @@ struct ProfileView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This permanently removes your account and saved articles.")
+            Text("This permanently removes your account and synced Briefly data.")
         }
         .alert("Could not delete account", isPresented: deleteErrorBinding, actions: {
             Button("OK") {
@@ -69,7 +69,7 @@ struct ProfileView: View {
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(BrieflyTheme.text(colorScheme))
 
-                Text("Signed in to keep saved stories synced and manage your local books and jobs.")
+                Text("Signed in to keep saved stories, books, jobs, and reading progress synced.")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.62))
             }

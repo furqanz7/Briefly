@@ -4,7 +4,7 @@ struct MoreView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
     @State private var appliedJobs: [JobListing] = []
-    private let jobsStore = LocalSavedJobsStore()
+    private let jobsService = SavedJobsService()
 
     var body: some View {
         NavigationStack {
@@ -19,9 +19,14 @@ struct MoreView: View {
             }
             .background(BrieflyTheme.premiumBackground.ignoresSafeArea())
             .navigationBarHidden(true)
-            .onAppear(perform: loadAppliedJobs)
+            .task {
+                await loadAppliedJobs()
+            }
+            .onChange(of: appState.session?.userID) {
+                Task { await loadAppliedJobs() }
+            }
             .onReceive(NotificationCenter.default.publisher(for: AppNotifications.appliedJobsDidChange)) { _ in
-                loadAppliedJobs()
+                Task { await loadAppliedJobs() }
             }
         }
     }
@@ -76,8 +81,13 @@ struct MoreView: View {
         .buttonStyle(.plain)
     }
 
-    private func loadAppliedJobs() {
-        appliedJobs = appState.session == nil ? [] : jobsStore.fetchApplied()
+    private func loadAppliedJobs() async {
+        guard let session = appState.session else {
+            appliedJobs = []
+            return
+        }
+
+        appliedJobs = (try? await jobsService.fetchAppliedJobs(session: session)) ?? []
     }
 }
 
@@ -85,7 +95,7 @@ private struct AppliedJobsView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
     @State private var appliedJobs: [JobListing] = []
-    private let jobsStore = LocalSavedJobsStore()
+    private let jobsService = SavedJobsService()
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -105,9 +115,14 @@ private struct AppliedJobsView: View {
         }
         .background(BrieflyTheme.premiumBackground.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear(perform: loadAppliedJobs)
+        .task {
+            await loadAppliedJobs()
+        }
+        .onChange(of: appState.session?.userID) {
+            Task { await loadAppliedJobs() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: AppNotifications.appliedJobsDidChange)) { _ in
-            loadAppliedJobs()
+            Task { await loadAppliedJobs() }
         }
     }
 
@@ -116,7 +131,7 @@ private struct AppliedJobsView: View {
             if appState.session == nil {
                 AccountGateView(
                     title: "Sign in to track applications",
-                    message: "Applied jobs are stored on this device so you can track applications while using Briefly.",
+                    message: "Applied jobs are tied to your account so they restore when you sign in on any device.",
                     buttonTitle: "Sign In or Create Account"
                 )
             } else if appliedJobs.isEmpty {
@@ -138,8 +153,13 @@ private struct AppliedJobsView: View {
         }
     }
 
-    private func loadAppliedJobs() {
-        appliedJobs = appState.session == nil ? [] : jobsStore.fetchApplied()
+    private func loadAppliedJobs() async {
+        guard let session = appState.session else {
+            appliedJobs = []
+            return
+        }
+
+        appliedJobs = (try? await jobsService.fetchAppliedJobs(session: session)) ?? []
     }
 }
 
