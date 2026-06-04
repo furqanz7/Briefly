@@ -98,6 +98,7 @@ final class AppState: ObservableObject {
         try await authService.deleteAccount(session: session)
         authNotice = "Your account was permanently deleted."
         self.session = nil
+        WidgetSnapshotStore.clearAccountWidgets()
         Haptics.success()
     }
 
@@ -105,6 +106,7 @@ final class AppState: ObservableObject {
         authService.signOut()
         Haptics.selection()
         session = nil
+        WidgetSnapshotStore.clearAccountWidgets()
     }
 
     private func passwordRecoverySession(from url: URL) -> PasswordRecoverySession? {

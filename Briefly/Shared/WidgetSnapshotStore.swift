@@ -88,6 +88,44 @@ enum WidgetSnapshotStore {
         WidgetCenter.shared.reloadTimelines(ofKind: "BrieflySportsWidget")
     }
 
+    static func saveJobs(saved: [JobListing], applied: [JobListing]) {
+        let source = saved.isEmpty ? applied : saved
+        let items = source.prefix(3).map(BrieflyWidgetJobItem.init(job:))
+        save(
+            BrieflyWidgetJobsSnapshot(
+                updatedAt: .now,
+                savedCount: saved.count,
+                appliedCount: applied.count,
+                jobs: items
+            ),
+            named: "jobs.json"
+        )
+        WidgetCenter.shared.reloadTimelines(ofKind: "BrieflyJobsWidget")
+    }
+
+    static func saveBooks(savedBooks: [BookItem], downloadedIDs: Set<String>, readingSummary: ReadingSummary) {
+        save(
+            BrieflyWidgetBooksSnapshot(
+                updatedAt: .now,
+                todaySeconds: readingSummary.todaySeconds,
+                weekSeconds: readingSummary.weekSeconds,
+                monthSeconds: readingSummary.monthSeconds,
+                overallSeconds: readingSummary.overallSeconds,
+                dailyGoalMinutes: readingSummary.dailyGoalMinutes,
+                hasCustomGoal: readingSummary.hasCustomGoal,
+                savedCount: savedBooks.count,
+                downloadedCount: downloadedIDs.count
+            ),
+            named: "books.json"
+        )
+        WidgetCenter.shared.reloadTimelines(ofKind: "BrieflyBooksWidget")
+    }
+
+    static func clearAccountWidgets() {
+        saveJobs(saved: [], applied: [])
+        saveBooks(savedBooks: [], downloadedIDs: [], readingSummary: ReadingSummary())
+    }
+
     private static func load<T: Decodable>(_ type: T.Type, named fileName: String) -> T? {
         guard let containerURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
             return nil
@@ -175,4 +213,41 @@ struct BrieflyWidgetMatch: Codable {
 struct BrieflyWidgetSportsSnapshot: Codable {
     let updatedAt: Date
     let match: BrieflyWidgetMatch?
+}
+
+struct BrieflyWidgetJobItem: Codable {
+    let id: String
+    let title: String
+    let company: String
+    let location: String
+    let workMode: String
+    let matchScore: Int
+
+    init(job: JobListing) {
+        id = job.id
+        title = job.title
+        company = job.company
+        location = job.location
+        workMode = job.workMode.rawValue
+        matchScore = job.matchScore
+    }
+}
+
+struct BrieflyWidgetJobsSnapshot: Codable {
+    let updatedAt: Date
+    let savedCount: Int
+    let appliedCount: Int
+    let jobs: [BrieflyWidgetJobItem]
+}
+
+struct BrieflyWidgetBooksSnapshot: Codable {
+    let updatedAt: Date
+    let todaySeconds: Int
+    let weekSeconds: Int
+    let monthSeconds: Int
+    let overallSeconds: Int
+    let dailyGoalMinutes: Int
+    let hasCustomGoal: Bool
+    let savedCount: Int
+    let downloadedCount: Int
 }

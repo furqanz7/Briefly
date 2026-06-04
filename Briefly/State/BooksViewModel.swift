@@ -89,12 +89,14 @@ final class BooksViewModel: ObservableObject {
         if savedBooks.contains(book) {
             savedBooks.removeAll { $0.id == book.id }
             store.remove(book, userID: session.userID)
+            syncWidgetSnapshot()
             Task {
                 try? await savedService.removeSaved(book: book, downloadedIDs: downloadedIDs, session: session)
             }
         } else {
             savedBooks.insert(book, at: 0)
             store.save(book, userID: session.userID)
+            syncWidgetSnapshot()
             Task {
                 try? await savedService.save(book: book, downloadedIDs: downloadedIDs, session: session)
             }
@@ -105,6 +107,7 @@ final class BooksViewModel: ObservableObject {
         guard let session else { return }
         store.markDownloaded(book, userID: session.userID)
         downloadedIDs = store.downloadedIDs(userID: session.userID)
+        syncWidgetSnapshot()
         Task {
             try? await savedService.markDownloaded(book: book, isSaved: savedBooks.contains(book), session: session)
         }
@@ -122,6 +125,7 @@ final class BooksViewModel: ObservableObject {
         readingSummary.weekSeconds += elapsed
         readingSummary.monthSeconds += elapsed
         readingSummary.overallSeconds += elapsed
+        syncWidgetSnapshot()
         syncReadingMinutes(session: session)
     }
 
@@ -133,6 +137,7 @@ final class BooksViewModel: ObservableObject {
         readingSummary.weekSeconds = max(0, readingSummary.weekSeconds - removed)
         readingSummary.monthSeconds = max(0, readingSummary.monthSeconds - removed)
         readingSummary.overallSeconds = max(0, readingSummary.overallSeconds - removed)
+        syncWidgetSnapshot()
         syncReadingMinutes(session: session)
     }
 
@@ -142,6 +147,7 @@ final class BooksViewModel: ObservableObject {
         readingSummary.dailyGoalMinutes = clamped
         readingSummary.hasCustomGoal = true
         store.setReadingGoalMinutes(clamped, userID: session.userID)
+        syncWidgetSnapshot()
         Task {
             try? await savedService.setReadingGoalMinutes(clamped, session: session)
         }
@@ -152,6 +158,7 @@ final class BooksViewModel: ObservableObject {
             savedBooks = []
             downloadedIDs = []
             readingSummary = ReadingSummary()
+            syncWidgetSnapshot()
             return
         }
 
@@ -160,6 +167,7 @@ final class BooksViewModel: ObservableObject {
             savedBooks = library.saved
             downloadedIDs = library.downloadedIDs
             readingSummary = library.readingSummary
+            syncWidgetSnapshot()
         } catch {
             savedBooks = store.savedBooks(userID: session.userID)
             downloadedIDs = store.downloadedIDs(userID: session.userID)
@@ -171,6 +179,7 @@ final class BooksViewModel: ObservableObject {
                 dailyGoalMinutes: store.readingGoalMinutes(userID: session.userID),
                 hasCustomGoal: store.hasReadingGoal(userID: session.userID)
             )
+            syncWidgetSnapshot()
         }
     }
 
@@ -180,5 +189,9 @@ final class BooksViewModel: ObservableObject {
         Task {
             try? await savedService.setReadingSeconds(seconds, session: session)
         }
+    }
+
+    private func syncWidgetSnapshot() {
+        WidgetSnapshotStore.saveBooks(savedBooks: savedBooks, downloadedIDs: downloadedIDs, readingSummary: readingSummary)
     }
 }

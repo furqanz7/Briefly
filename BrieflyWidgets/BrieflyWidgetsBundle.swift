@@ -8,5 +8,7 @@ struct BrieflyWidgetsBundle: WidgetBundle {
         BrieflyMarketWidget()
         BrieflyCryptoWidget()
         BrieflySportsWidget()
+        BrieflyJobsWidget()
+        BrieflyBooksWidget()
     }
 }

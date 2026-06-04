@@ -154,6 +154,7 @@ final class JobsViewModel: ObservableObject {
         savedJobs.removeAll { $0.id == job.id }
         savedJobs.insert(job, at: 0)
         savedStore.save(job, userID: session.userID)
+        syncWidgetSnapshot()
         do {
             try await savedService.save(job: job, session: session)
         } catch {
@@ -182,6 +183,7 @@ final class JobsViewModel: ObservableObject {
         }
         savedJobs.removeAll { $0.id == job.id }
         savedStore.delete(job, userID: session.userID)
+        syncWidgetSnapshot()
         do {
             try await savedService.deleteSaved(job: job, session: session)
         } catch {
@@ -197,6 +199,7 @@ final class JobsViewModel: ObservableObject {
         appliedJobs.removeAll { $0.id == job.id }
         appliedJobs.insert(job, at: 0)
         savedStore.markApplied(job, userID: session.userID)
+        syncWidgetSnapshot()
         do {
             try await savedService.markApplied(job: job, session: session)
         } catch {
@@ -240,12 +243,14 @@ final class JobsViewModel: ObservableObject {
         if let index = appliedJobs.firstIndex(where: { $0.id == job.id }) {
             appliedJobs[index] = job
         }
+        syncWidgetSnapshot()
     }
 
     private func loadAccountBackedJobs(session: UserSession?) async {
         guard let session else {
             savedJobs = []
             appliedJobs = []
+            syncWidgetSnapshot()
             return
         }
 
@@ -254,11 +259,17 @@ final class JobsViewModel: ObservableObject {
             async let applied = savedService.fetchAppliedJobs(session: session)
             savedJobs = try await saved
             appliedJobs = try await applied
+            syncWidgetSnapshot()
             NotificationCenter.default.post(name: AppNotifications.appliedJobsDidChange, object: nil)
         } catch {
             savedJobs = savedStore.fetch(userID: session.userID)
             appliedJobs = savedStore.fetchApplied(userID: session.userID)
+            syncWidgetSnapshot()
         }
+    }
+
+    private func syncWidgetSnapshot() {
+        WidgetSnapshotStore.saveJobs(saved: savedJobs, applied: appliedJobs)
     }
 
     private var filteredJobs: [JobListing] {
