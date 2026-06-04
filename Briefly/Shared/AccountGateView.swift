@@ -12,21 +12,31 @@ struct AccountGateView: View {
 
     var body: some View {
         VStack(spacing: 18) {
-            Image(systemName: "person.crop.circle.badge.plus")
-                .font(.system(size: 42, weight: .semibold))
-                .foregroundStyle(BrieflyTheme.accent)
+            ZStack {
+                Circle()
+                    .fill(BrieflyTheme.accent.opacity(0.18))
+                    .frame(width: 70, height: 70)
+                    .overlay {
+                        Circle()
+                            .stroke(BrieflyTheme.accent.opacity(0.36), lineWidth: 1)
+                    }
+
+                Image(systemName: "person.crop.circle.badge.plus")
+                    .font(.system(size: 32, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.accent)
+            }
 
             VStack(spacing: 8) {
                 Text(title)
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 24, weight: .heavy))
                     .foregroundStyle(BrieflyTheme.text(colorScheme))
                     .multilineTextAlignment(.center)
 
                 Text(message)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.62))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(BrieflyTheme.secondaryText)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(3)
+                    .lineSpacing(4)
             }
 
             Button {
@@ -45,7 +55,18 @@ struct AccountGateView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(22)
-        .background(BrieflyTheme.card(colorScheme))
+        .background {
+            RoundedRectangle(cornerRadius: BrieflyTheme.cardCornerRadius, style: .continuous)
+                .fill(BrieflyTheme.cardBase.opacity(0.96))
+                .overlay {
+                    BrieflyTheme.surfaceGradient
+                        .clipShape(RoundedRectangle(cornerRadius: BrieflyTheme.cardCornerRadius, style: .continuous))
+                }
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: BrieflyTheme.cardCornerRadius, style: .continuous)
+                .stroke(BrieflyTheme.divider.opacity(0.88), lineWidth: 1)
+        }
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .sheet(isPresented: $isShowingAuth) {
             AuthView()

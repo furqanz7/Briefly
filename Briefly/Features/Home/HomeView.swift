@@ -112,58 +112,18 @@ struct HomeView: View {
 
             Spacer(minLength: 16)
 
-            Button {
+            CircleIconButton(systemName: isSearchVisible ? "xmark" : "magnifyingglass") {
                 withAnimation {
                     isSearchVisible.toggle()
                 }
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(BrieflyTheme.elevatedCard)
-                        .frame(width: 34, height: 34)
-                        .overlay {
-                            Circle().stroke(BrieflyTheme.divider, lineWidth: 1)
-                        }
-
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.75))
-                }
             }
 
-            Button {
+            CircleIconButton(systemName: "sparkle", tint: BrieflyTheme.accent, isProminent: true) {
                 isShowingGeneralChat = true
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(BrieflyTheme.elevatedCard)
-                        .frame(width: 34, height: 34)
-                        .overlay {
-                            Circle().stroke(BrieflyTheme.accent.opacity(0.38), lineWidth: 1)
-                        }
-                        .shadow(color: BrieflyTheme.glowViolet, radius: 14, x: 0, y: 0)
-
-                    Image(systemName: "sparkle")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(BrieflyTheme.accent)
-                }
             }
 
-            Button {
+            CircleIconButton(systemName: "link") {
                 isShowingExplainLink = true
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(BrieflyTheme.elevatedCard)
-                        .frame(width: 34, height: 34)
-                        .overlay {
-                            Circle().stroke(BrieflyTheme.divider, lineWidth: 1)
-                        }
-
-                    Image(systemName: "link")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.75))
-                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -940,17 +900,17 @@ struct HomeView: View {
 
 private struct HomeLogoLockup: View {
     var body: some View {
-        HStack(alignment: .center, spacing: 11) {
+        HStack(alignment: .center, spacing: 12) {
             Image("BrieflyLogo")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 34, height: 34)
+                .frame(width: 38, height: 38)
                 .blendMode(.screen)
-                .shadow(color: BrieflyTheme.accent.opacity(0.46), radius: 9, x: 0, y: 0)
-                .shadow(color: BrieflyTheme.accentBlue.opacity(0.18), radius: 14, x: 0, y: 0)
+                .shadow(color: BrieflyTheme.accent.opacity(0.50), radius: 12, x: 0, y: 0)
+                .shadow(color: BrieflyTheme.accentBlue.opacity(0.24), radius: 18, x: 0, y: 0)
 
             Text("Briefly")
-                .font(.custom("Yeager-Light", size: 32))
+                .font(.custom("Yeager-Light", size: 34))
                 .tracking(0.35)
                 .foregroundStyle(
                     LinearGradient(
@@ -1487,19 +1447,41 @@ private struct BriefEmptyCard: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(BrieflyTheme.accent.opacity(0.16))
+                    .frame(width: 46, height: 46)
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 19, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.accent)
+            }
+
             Text("Building the brief")
-                .font(.system(size: 17, weight: .bold))
+                .font(.system(size: 19, weight: .heavy))
                 .foregroundStyle(BrieflyTheme.text(colorScheme))
 
             Text("Briefly is waiting for enough strong stories to make this useful.")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.62))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(BrieflyTheme.secondaryText)
+                .lineSpacing(3)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(BrieflyTheme.card(colorScheme))
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(BrieflyTheme.cardBase.opacity(0.94))
+                .overlay {
+                    BrieflyTheme.quietSurfaceGradient
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(BrieflyTheme.divider.opacity(0.82), lineWidth: 1)
+        }
     }
 }
 
@@ -1669,7 +1651,7 @@ struct ArticleRowPlaceholder: View {
         }
         .padding(14)
         .background(BrieflyTheme.card(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -1679,26 +1661,42 @@ private struct EmptyPicksState: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: hasSearchText ? "magnifyingglass.circle" : "newspaper")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(BrieflyTheme.accent)
+            ZStack {
+                Circle()
+                    .fill(BrieflyTheme.accent.opacity(0.16))
+                    .frame(width: 54, height: 54)
+
+                Image(systemName: hasSearchText ? "magnifyingglass.circle" : "newspaper")
+                    .font(.system(size: 25, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.accent)
+            }
 
             Text(hasSearchText ? "No stories matched your search." : "No stories available right now.")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 18, weight: .heavy))
                 .foregroundStyle(BrieflyTheme.text(colorScheme))
+                .multilineTextAlignment(.center)
 
             Text(hasSearchText ? "Briefly should now answer with AI instead of going empty." : "Pull to refresh later or check your API key.")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.58))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(BrieflyTheme.secondaryText)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 28)
         .padding(.horizontal, 20)
-        .background(BrieflyTheme.card(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(BrieflyTheme.cardBase.opacity(0.94))
+                .overlay {
+                    BrieflyTheme.quietSurfaceGradient
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(BrieflyTheme.text(colorScheme).opacity(0.12), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(BrieflyTheme.divider.opacity(0.82), lineWidth: 1)
         }
     }
 }

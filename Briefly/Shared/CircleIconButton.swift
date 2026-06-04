@@ -1,25 +1,37 @@
 import SwiftUI
 
 struct CircleIconButton: View {
-    @Environment(\.colorScheme) private var colorScheme
     let systemName: String
+    var size: CGFloat = 42
+    var iconSize: CGFloat = 16
+    var tint: Color = BrieflyTheme.primaryText.opacity(0.84)
+    var isProminent = false
+    var isLoading = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             ZStack {
                 Circle()
-                    .fill(BrieflyTheme.elevatedCard)
-                    .frame(width: 34, height: 34)
+                    .fill(isProminent ? tint.opacity(0.18) : BrieflyTheme.elevatedCard.opacity(0.96))
+                    .frame(width: size, height: size)
                     .overlay {
-                        Circle().stroke(BrieflyTheme.divider, lineWidth: 1)
+                        Circle()
+                            .stroke(isProminent ? tint.opacity(0.46) : BrieflyTheme.divider.opacity(0.92), lineWidth: 1)
                     }
-                    .shadow(color: BrieflyTheme.glowBlue, radius: 10, x: 0, y: 0)
+                    .shadow(color: isProminent ? tint.opacity(0.18) : .black.opacity(0.16), radius: isProminent ? 18 : 10, x: 0, y: 6)
 
-                Image(systemName: systemName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.75))
+                if isLoading {
+                    ProgressView()
+                        .tint(tint)
+                } else {
+                    Image(systemName: systemName)
+                        .font(.system(size: iconSize, weight: .heavy))
+                        .foregroundStyle(tint)
+                }
             }
+            .contentShape(Circle())
         }
+        .buttonStyle(.plain)
     }
 }

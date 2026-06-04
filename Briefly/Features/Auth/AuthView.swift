@@ -18,12 +18,15 @@ struct AuthView: View {
             VStack(alignment: .leading, spacing: 26) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(isLogin ? "Welcome back" : "Create account")
-                        .font(.system(size: 34, weight: .bold))
+                        .font(.system(size: 36, weight: .heavy))
                         .foregroundStyle(BrieflyTheme.text(colorScheme))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
 
-                    Text("Clear, fast news intelligence without the noise.")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.65))
+                    Text("Sync saved stories, books, job activity, and reading progress across every device.")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(BrieflyTheme.secondaryText)
+                        .lineSpacing(4)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -56,7 +59,7 @@ struct AuthView: View {
                         }
                         Text(isLogin ? "Log In" : "Sign Up")
                     }
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: 17, weight: .heavy))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
                     .background(BrieflyTheme.actionGradient)
@@ -286,8 +289,9 @@ private struct AuthField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.62))
+                .font(.system(size: 12, weight: .heavy))
+                .foregroundStyle(BrieflyTheme.secondaryText)
+                .textCase(.uppercase)
 
             Group {
                 if isSecure {
@@ -303,10 +307,10 @@ private struct AuthField: View {
             .foregroundStyle(BrieflyTheme.text(colorScheme))
             .tint(BrieflyTheme.accent)
             .padding(18)
-            .background(BrieflyTheme.elevatedCard)
+            .background(BrieflyTheme.cardBase.opacity(0.96))
             .overlay {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(BrieflyTheme.divider, lineWidth: 1)
+                    .stroke(BrieflyTheme.divider.opacity(0.9), lineWidth: 1)
             }
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }

@@ -34,12 +34,14 @@ struct MoreView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("More")
-                .font(.system(size: 40, weight: .heavy))
+                .font(.system(size: 44, weight: .heavy))
                 .foregroundStyle(BrieflyTheme.text(colorScheme))
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
 
-            Text("Account, saved stories, and your job application tracker.")
+            Text("Account, saved stories, applied jobs, and synced progress.")
                 .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.58))
+                .foregroundStyle(BrieflyTheme.secondaryText)
         }
     }
 
@@ -51,7 +53,7 @@ struct MoreView: View {
                 MoreDestinationRow(
                     icon: "bookmark.fill",
                     title: "Saved Stories",
-                    subtitle: "Bookmarks from Home",
+                    subtitle: "Bookmarks synced to your account",
                     tint: BrieflyTheme.accentBlue
                 )
             }
@@ -136,13 +138,23 @@ private struct AppliedJobsView: View {
                 )
             } else if appliedJobs.isEmpty {
                 Text("Open a job link from Jobs, close the in-app browser, then confirm that you applied. It will appear here.")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.62))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(BrieflyTheme.secondaryText)
                     .lineSpacing(4)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(18)
-                    .background(BrieflyTheme.card(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .background {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(BrieflyTheme.cardBase.opacity(0.92))
+                            .overlay {
+                                BrieflyTheme.quietSurfaceGradient
+                                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                            }
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(BrieflyTheme.divider.opacity(0.82), lineWidth: 1)
+                    }
             } else {
                 VStack(spacing: 12) {
                     ForEach(appliedJobs) { job in
@@ -199,11 +211,22 @@ private struct MoreDestinationRow: View {
                 .foregroundStyle(BrieflyTheme.secondaryText)
         }
         .padding(16)
-        .background(BrieflyTheme.elevatedCard)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(BrieflyTheme.cardBase.opacity(0.94))
+                .overlay {
+                    LinearGradient(
+                        colors: [tint.opacity(0.11), BrieflyTheme.elevatedCard.opacity(0.90)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(BrieflyTheme.divider, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(BrieflyTheme.divider.opacity(0.86), lineWidth: 1)
         }
     }
 }

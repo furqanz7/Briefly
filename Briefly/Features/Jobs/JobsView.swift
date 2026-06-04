@@ -1456,24 +1456,41 @@ private struct JobsMessageCard: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 28, weight: .heavy))
-                .foregroundStyle(BrieflyTheme.accent)
+            ZStack {
+                Circle()
+                    .fill(BrieflyTheme.accent.opacity(0.16))
+                    .frame(width: 58, height: 58)
+
+                Image(systemName: icon)
+                    .font(.system(size: 25, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.accent)
+            }
+
             Text(title)
-                .font(.system(size: 22, weight: .heavy))
+                .font(.system(size: 24, weight: .heavy))
                 .foregroundStyle(BrieflyTheme.primaryText)
+                .multilineTextAlignment(.center)
+
             Text(message)
                 .font(.system(size: 15, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(BrieflyTheme.secondaryText)
+                .lineSpacing(4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(22)
-        .background(BrieflyTheme.cardBase)
+        .background {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(BrieflyTheme.cardBase.opacity(0.96))
+                .overlay {
+                    BrieflyTheme.surfaceGradient
+                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(BrieflyTheme.divider, lineWidth: 1)
+                .stroke(BrieflyTheme.divider.opacity(0.86), lineWidth: 1)
         }
     }
 }

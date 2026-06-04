@@ -52,9 +52,10 @@ struct SportsView: View {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Sports")
-                        .font(.system(size: 34, weight: .semibold))
-                        .tracking(-0.8)
+                        .font(.system(size: 44, weight: .heavy))
                         .foregroundStyle(BrieflyTheme.text(colorScheme))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
 
                     Text("Live scores, fixtures and results")
                         .font(.system(size: 14, weight: .semibold))
@@ -63,28 +64,9 @@ struct SportsView: View {
 
                 Spacer(minLength: 16)
 
-                Button {
+                CircleIconButton(systemName: "arrow.clockwise", size: 46, isLoading: viewModel.isLoading) {
                     Task { await viewModel.load(force: true) }
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(BrieflyTheme.elevatedCard)
-                            .frame(width: 38, height: 38)
-                            .overlay {
-                                Circle().stroke(BrieflyTheme.divider, lineWidth: 1)
-                            }
-
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .tint(BrieflyTheme.primaryText)
-                        } else {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.8))
-                        }
-                    }
                 }
-                .buttonStyle(.plain)
                 .disabled(viewModel.isLoading)
             }
 
@@ -262,27 +244,20 @@ struct SportsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(BrieflyTheme.elevatedCard)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(BrieflyTheme.cardBase)
+        .clipShape(Capsule())
         .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            Capsule()
                 .stroke(BrieflyTheme.divider, lineWidth: 1)
         }
     }
 
     private var loadingStack: some View {
         VStack(spacing: 12) {
-            ForEach(0..<4, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(BrieflyTheme.elevatedCard.opacity(0.72))
-                    .frame(height: 112)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .stroke(BrieflyTheme.divider, lineWidth: 1)
-                    }
+            ForEach(0..<3, id: \.self) { index in
+                SportsLoadingCard(index: index)
             }
         }
-        .redacted(reason: .placeholder)
     }
 
     private func matchCount(in sports: [LiveSportSection]) -> Int {
@@ -827,6 +802,75 @@ private struct TeamScoreText: View {
     }
 }
 
+private struct SportsLoadingCard: View {
+    let index: Int
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(BrieflyTheme.accent.opacity(index == 0 ? 0.24 : 0.14))
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: index == 0 ? "dot.radiowaves.left.and.right" : "sportscourt.fill")
+                    .font(.system(size: 18, weight: .heavy))
+                    .foregroundStyle(index == 0 ? .green : BrieflyTheme.accent)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                SportsSkeletonLine(widthFactor: index == 0 ? 0.76 : 0.62, height: 15)
+                SportsSkeletonLine(widthFactor: 0.92, height: 11)
+                SportsSkeletonLine(widthFactor: index == 2 ? 0.66 : 0.80, height: 11)
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .trailing, spacing: 8) {
+                SportsSkeletonLine(widthFactor: 1, height: 20)
+                    .frame(width: 46)
+                SportsSkeletonLine(widthFactor: 1, height: 10)
+                    .frame(width: 32)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(BrieflyTheme.cardBase.opacity(0.94))
+                .overlay {
+                    LinearGradient(
+                        colors: [
+                            BrieflyTheme.accent.opacity(0.13),
+                            BrieflyTheme.accentBlue.opacity(0.06),
+                            BrieflyTheme.elevatedCard.opacity(0.82)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                }
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(BrieflyTheme.divider.opacity(0.86), lineWidth: 1)
+        }
+    }
+}
+
+private struct SportsSkeletonLine: View {
+    let widthFactor: CGFloat
+    let height: CGFloat
+
+    var body: some View {
+        GeometryReader { proxy in
+            RoundedRectangle(cornerRadius: height / 2, style: .continuous)
+                .fill(BrieflyTheme.secondaryText.opacity(0.14))
+                .frame(width: proxy.size.width * widthFactor, height: height)
+        }
+        .frame(height: height)
+    }
+}
+
 private struct SportsMessageCard: View {
     let icon: String
     let title: String
@@ -834,27 +878,39 @@ private struct SportsMessageCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(BrieflyTheme.accent)
+            ZStack {
+                Circle()
+                    .fill(BrieflyTheme.accent.opacity(0.16))
+                    .frame(width: 52, height: 52)
+
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.accent)
+            }
 
             Text(title)
-                .font(.system(size: 22, weight: .semibold))
-                .tracking(-0.4)
+                .font(.system(size: 23, weight: .heavy))
                 .foregroundStyle(BrieflyTheme.primaryText)
 
             Text(message)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(BrieflyTheme.secondaryText)
                 .lineSpacing(3)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(22)
-        .background(BrieflyTheme.elevatedCard)
+        .background {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(BrieflyTheme.cardBase.opacity(0.94))
+                .overlay {
+                    BrieflyTheme.quietSurfaceGradient
+                        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(BrieflyTheme.divider, lineWidth: 1)
+                .stroke(BrieflyTheme.divider.opacity(0.86), lineWidth: 1)
         }
     }
 }

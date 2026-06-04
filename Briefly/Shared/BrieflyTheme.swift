@@ -12,8 +12,29 @@ enum BrieflyTheme {
     static let glowViolet = Color(hex: 0x7B3CFF).opacity(0.25)
     static let glowBlue = Color(hex: 0x2F7CFF).opacity(0.18)
     static let actionFill = accent
+    static let cardCornerRadius: CGFloat = 24
+    static let largeCornerRadius: CGFloat = 30
     static let actionGradient = LinearGradient(
         colors: [accent, accentBlue],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    static let surfaceGradient = LinearGradient(
+        colors: [
+            accent.opacity(0.18),
+            accentBlue.opacity(0.08),
+            cardBase.opacity(0.96)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    static let quietSurfaceGradient = LinearGradient(
+        colors: [
+            elevatedCard.opacity(0.98),
+            cardBase.opacity(0.94)
+        ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )

@@ -66,25 +66,11 @@ struct SavedView: View {
             Spacer(minLength: 16)
 
             if appState.session != nil {
-                Button {
+                CircleIconButton(systemName: isSearchVisible ? "xmark" : "magnifyingglass") {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         isSearchVisible.toggle()
                     }
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(BrieflyTheme.elevatedCard)
-                            .frame(width: 34, height: 34)
-                            .overlay {
-                                Circle().stroke(BrieflyTheme.divider, lineWidth: 1)
-                            }
-
-                        Image(systemName: isSearchVisible ? "xmark" : "magnifyingglass")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.75))
-                    }
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -163,23 +149,42 @@ private struct SavedMessageCard: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(BrieflyTheme.accent)
+            ZStack {
+                Circle()
+                    .fill(BrieflyTheme.accent.opacity(0.16))
+                    .frame(width: 54, height: 54)
+
+                Image(systemName: icon)
+                    .font(.system(size: 25, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.accent)
+            }
 
             Text(title)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 18, weight: .heavy))
                 .foregroundStyle(BrieflyTheme.text(colorScheme))
+                .multilineTextAlignment(.center)
 
             Text(subtitle)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(BrieflyTheme.text(colorScheme).opacity(0.58))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(BrieflyTheme.secondaryText)
                 .multilineTextAlignment(.center)
+                .lineSpacing(3)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
         .padding(.horizontal, 18)
-        .background(BrieflyTheme.card(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(BrieflyTheme.cardBase.opacity(0.94))
+                .overlay {
+                    BrieflyTheme.quietSurfaceGradient
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(BrieflyTheme.divider.opacity(0.82), lineWidth: 1)
+        }
     }
 }

@@ -1408,19 +1408,39 @@ private struct ReadingGoalEditor: View {
 
 private struct BooksLoadingCard: View {
     var body: some View {
-        VStack(spacing: 14) {
-            ProgressView()
-                .tint(BrieflyTheme.primaryText)
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(BrieflyTheme.accent.opacity(0.16))
+                    .frame(width: 58, height: 58)
+
+                ProgressView()
+                    .tint(BrieflyTheme.primaryText)
+            }
+
             Text("Finding books")
-                .font(.system(size: 20, weight: .heavy))
+                .font(.system(size: 23, weight: .heavy))
                 .foregroundStyle(BrieflyTheme.primaryText)
+
+            Text("Loading titles, previews, and reading metadata.")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(BrieflyTheme.secondaryText)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, minHeight: 220)
-        .background(BrieflyTheme.cardBase)
+        .padding(22)
+        .background {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(BrieflyTheme.cardBase.opacity(0.96))
+                .overlay {
+                    BrieflyTheme.surfaceGradient
+                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(BrieflyTheme.divider, lineWidth: 1)
+                .stroke(BrieflyTheme.divider.opacity(0.86), lineWidth: 1)
         }
     }
 }
@@ -1431,24 +1451,41 @@ private struct BooksEmptyCard: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Image(systemName: "books.vertical.fill")
-                .font(.system(size: 30, weight: .heavy))
-                .foregroundStyle(BrieflyTheme.accent)
+            ZStack {
+                Circle()
+                    .fill(BrieflyTheme.accent.opacity(0.16))
+                    .frame(width: 58, height: 58)
+
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 27, weight: .heavy))
+                    .foregroundStyle(BrieflyTheme.accent)
+            }
+
             Text(title)
-                .font(.system(size: 22, weight: .heavy))
+                .font(.system(size: 24, weight: .heavy))
                 .foregroundStyle(BrieflyTheme.primaryText)
+                .multilineTextAlignment(.center)
+
             Text(message)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(BrieflyTheme.secondaryText)
                 .multilineTextAlignment(.center)
+                .lineSpacing(4)
         }
         .frame(maxWidth: .infinity, minHeight: 240)
         .padding(22)
-        .background(BrieflyTheme.cardBase)
+        .background {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(BrieflyTheme.cardBase.opacity(0.96))
+                .overlay {
+                    BrieflyTheme.surfaceGradient
+                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(BrieflyTheme.divider, lineWidth: 1)
+                .stroke(BrieflyTheme.divider.opacity(0.86), lineWidth: 1)
         }
     }
 }

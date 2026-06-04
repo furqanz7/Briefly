@@ -38,20 +38,28 @@ struct MainTabView: View {
         .onAppear {
             let appearance = UITabBarAppearance()
             appearance.configureWithTransparentBackground()
-            appearance.backgroundColor = .clear
-            appearance.shadowColor = .clear
+            appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+            appearance.backgroundColor = UIColor(BrieflyTheme.cardBase.opacity(0.72))
+            appearance.shadowColor = UIColor(BrieflyTheme.divider.opacity(0.75))
 
             let itemAppearance = UITabBarItemAppearance()
-            itemAppearance.normal.iconColor = UIColor(BrieflyTheme.secondaryText.opacity(0.72))
-            itemAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor(BrieflyTheme.secondaryText.opacity(0.72))]
+            itemAppearance.normal.iconColor = UIColor(BrieflyTheme.secondaryText.opacity(0.70))
+            itemAppearance.normal.titleTextAttributes = [
+                .foregroundColor: UIColor(BrieflyTheme.secondaryText.opacity(0.70)),
+                .font: UIFont.systemFont(ofSize: 11, weight: .semibold)
+            ]
             itemAppearance.selected.iconColor = UIColor(BrieflyTheme.accent)
-            itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(BrieflyTheme.primaryText)]
+            itemAppearance.selected.titleTextAttributes = [
+                .foregroundColor: UIColor(BrieflyTheme.primaryText),
+                .font: UIFont.systemFont(ofSize: 11, weight: .heavy)
+            ]
             appearance.stackedLayoutAppearance = itemAppearance
             appearance.inlineLayoutAppearance = itemAppearance
             appearance.compactInlineLayoutAppearance = itemAppearance
 
             UITabBar.appearance().standardAppearance = appearance
             UITabBar.appearance().scrollEdgeAppearance = appearance
+            UITabBar.appearance().isTranslucent = true
         }
     }
 }
