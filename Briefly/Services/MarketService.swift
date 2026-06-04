@@ -27,6 +27,30 @@ struct MarketDataResponse: Decodable {
     let expiresAt: Date?
     let message: String?
     let snapshots: [MarketSnapshot]
+
+    var providerStatusMessage: String? {
+        normalizedProviderMessage(
+            cachedLabel: "market data",
+            staleLabel: "Showing saved market data while live providers refresh."
+        )
+    }
+
+    private func normalizedProviderMessage(cachedLabel: String, staleLabel: String) -> String? {
+        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedMessage, !trimmedMessage.isEmpty {
+            return trimmedMessage
+        }
+
+        if stale || source == .stale {
+            return staleLabel
+        }
+
+        if cacheHit || source == .cached {
+            return "Showing cached \(cachedLabel)."
+        }
+
+        return nil
+    }
 }
 
 struct CryptoStatsResponse: Decodable {
@@ -39,6 +63,20 @@ struct CryptoStatsResponse: Decodable {
     let expiresAt: Date?
     let message: String?
     let stats: CryptoStats
+
+    var providerStatusMessage: String? {
+        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedMessage, !trimmedMessage.isEmpty {
+            return trimmedMessage
+        }
+        if stale || source == .stale {
+            return "Showing saved crypto stats while live providers refresh."
+        }
+        if cacheHit || source == .cached {
+            return "Showing cached crypto stats."
+        }
+        return nil
+    }
 }
 
 struct CryptoStats: Equatable, Decodable {
@@ -61,6 +99,20 @@ struct CryptoMoversResponse: Decodable {
     let message: String?
     let gainers: [MarketSnapshot]
     let losers: [MarketSnapshot]
+
+    var providerStatusMessage: String? {
+        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedMessage, !trimmedMessage.isEmpty {
+            return trimmedMessage
+        }
+        if stale || source == .stale {
+            return "Showing saved crypto movers while live providers refresh."
+        }
+        if cacheHit || source == .cached {
+            return "Showing cached crypto movers."
+        }
+        return nil
+    }
 }
 
 enum MarketSnapshotSource: String, Decodable {

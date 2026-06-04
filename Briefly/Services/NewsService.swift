@@ -39,12 +39,20 @@ struct NewsService {
 
         let combinedService = CombinedNewsService(providers: providers)
 
-        let articles = try await combinedService.fetchFeed(
-            categories: NewsCategory.allCases,
-            desiredCount: desiredCount,
-            forceRefresh: forceRefresh,
-            excludingIDs: excludingIDs
-        )
+        let articles: [Article]
+        do {
+            articles = try await combinedService.fetchFeed(
+                categories: NewsCategory.allCases,
+                desiredCount: desiredCount,
+                forceRefresh: forceRefresh,
+                excludingIDs: excludingIDs
+            )
+        } catch {
+            if let stale = Self.staleCachedArticles(desiredCount: desiredCount) {
+                return stale
+            }
+            throw error
+        }
 
         let todayWindow = DayWindow.current()
         let trailingWindow = DayWindow.trailing(hours: 24)
@@ -71,11 +79,18 @@ struct NewsService {
         let merged = dedupeByID(todaysArticles + carryoverArticles)
 
         let result = Array(merged.prefix(desiredCount))
+        if result.isEmpty, let stale = Self.staleCachedArticles(desiredCount: desiredCount) {
+            return stale
+        }
         Self.storeCache(result)
         return result
     }
 
     private struct EdgeFeedEnvelope: Decodable {
+        let generatedAt: Date?
+        let source: String?
+        let cacheHit: Bool?
+        let message: String?
         let articles: [Article]
     }
 
@@ -118,6 +133,11 @@ struct NewsService {
         guard let cacheTimestamp, cachedArticles.count >= minimumCount else { return nil }
         guard now.timeIntervalSince(cacheTimestamp) < cacheTTL else { return nil }
         return cachedArticles
+    }
+
+    private static func staleCachedArticles(desiredCount: Int) -> [Article]? {
+        guard !cachedArticles.isEmpty else { return nil }
+        return Array(cachedArticles.prefix(desiredCount))
     }
 
     private static func storeCache(_ articles: [Article]) {

@@ -30,13 +30,33 @@ type Article = {
 
 type FeedResponse = {
   generatedAt: string
+  source: "live" | "cached" | "empty"
   cacheHit: boolean
+  message: string | null
+  providerDiagnostics: ProviderDiagnostic[]
   articles: Article[]
 }
 
 type CacheEntry = {
   expiresAt: number
   payload: FeedResponse
+}
+
+type ProviderDiagnostic = {
+  provider: string
+  category: NewsCategory | "sports" | null
+  count: number
+  error: string | null
+}
+
+type ProviderTask = {
+  provider: string
+  category: NewsCategory | "sports" | null
+  run: () => Promise<Article[]>
+}
+
+type ProviderTaskResult = ProviderDiagnostic & {
+  articles: Article[]
 }
 
 const feedCache = new Map<string, CacheEntry>()
@@ -126,6 +146,10 @@ async function fetchJSON(url: string, init?: RequestInit) {
     throw new Error(`httpStatus(${response.status}, ${body.slice(0, 180)})`)
   }
   return await response.json()
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -651,7 +675,12 @@ Deno.serve(async (request) => {
   const now = Date.now()
   const cached = feedCache.get(cacheKey)
   if (cached && cached.expiresAt > now) {
-    return json(200, { ...cached.payload, cacheHit: true })
+    return json(200, {
+      ...cached.payload,
+      source: "cached",
+      cacheHit: true,
+      message: cached.payload.message ?? "Showing cached brief while providers refresh.",
+    } satisfies FeedResponse)
   }
 
   const guardianKey = Deno.env.get("GUARDIAN_API_KEY") ?? ""
@@ -659,46 +688,108 @@ Deno.serve(async (request) => {
   const newsAPIKey = Deno.env.get("NEWSAPI_API_KEY") ?? ""
   const rapidAPIKey = Deno.env.get("RAPIDAPI_KEY") ?? ""
 
-  const tasks: Array<() => Promise<Article[]>> = []
+  const tasks: ProviderTask[] = []
 
   const pageSizePerBucket = 4
   for (const category of categories) {
-    if (guardianKey) tasks.push(() => guardianFetch(guardianKey, category, pageSizePerBucket, fromDate))
-    if (gnewsKey) tasks.push(() => gnewsFetch(gnewsKey, category, pageSizePerBucket, lang, country))
-    if (newsAPIKey) tasks.push(() => newsAPIOrgFetch(newsAPIKey, category, pageSizePerBucket, country))
+    if (guardianKey) {
+      tasks.push({
+        provider: "guardian",
+        category,
+        run: () => guardianFetch(guardianKey, category, pageSizePerBucket, fromDate),
+      })
+    }
+    if (gnewsKey) {
+      tasks.push({
+        provider: "gnews",
+        category,
+        run: () => gnewsFetch(gnewsKey, category, pageSizePerBucket, lang, country),
+      })
+    }
+    if (newsAPIKey) {
+      tasks.push({
+        provider: "newsapi",
+        category,
+        run: () => newsAPIOrgFetch(newsAPIKey, category, pageSizePerBucket, country),
+      })
+    }
   }
   if (rapidAPIKey) {
-    tasks.push(() => cricbuzzNewsFetch(rapidAPIKey, pageSizePerBucket + 4))
-    tasks.push(() => cricketLiveLineNewsFetch(rapidAPIKey, pageSizePerBucket + 4))
-    tasks.push(() => espnCricinfoNewsFetch(rapidAPIKey, pageSizePerBucket + 4))
-    tasks.push(() => liveScoreNewsFetch(rapidAPIKey, pageSizePerBucket + 4))
+    tasks.push({
+      provider: "cricbuzz-news",
+      category: "sports",
+      run: () => cricbuzzNewsFetch(rapidAPIKey, pageSizePerBucket + 4),
+    })
+    tasks.push({
+      provider: "cricket-live-line-news",
+      category: "sports",
+      run: () => cricketLiveLineNewsFetch(rapidAPIKey, pageSizePerBucket + 4),
+    })
+    tasks.push({
+      provider: "espncricinfo-news",
+      category: "sports",
+      run: () => espnCricinfoNewsFetch(rapidAPIKey, pageSizePerBucket + 4),
+    })
+    tasks.push({
+      provider: "livescore-news",
+      category: "sports",
+      run: () => liveScoreNewsFetch(rapidAPIKey, pageSizePerBucket + 4),
+    })
   }
 
   // If no providers are configured, return empty but valid payload.
   if (tasks.length === 0) {
     const payload: FeedResponse = {
       generatedAt: new Date().toISOString(),
+      source: "empty",
       cacheHit: false,
+      message: "No news providers are configured.",
+      providerDiagnostics: [],
       articles: [],
     }
     feedCache.set(cacheKey, { expiresAt: now + ttlSeconds * 1000, payload })
     return json(200, payload)
   }
 
-  const results = await poolMap(tasks, 6, async (fn) => {
+  const results = await poolMap(tasks, 6, async (task): Promise<ProviderTaskResult> => {
     try {
-      return await fn()
-    } catch {
-      return []
+      const articles = await task.run()
+      return {
+        provider: task.provider,
+        category: task.category,
+        count: articles.length,
+        error: null,
+        articles,
+      }
+    } catch (error) {
+      return {
+        provider: task.provider,
+        category: task.category,
+        count: 0,
+        error: errorMessage(error),
+        articles: [],
+      }
     }
   })
 
-  const merged = results.flatMap((r) => r)
+  const merged = results.flatMap((result) => result.articles)
   const finalArticles = dedupeAndSort(merged, desiredCount)
+  const diagnostics = results.map(({ provider, category, count, error }) => ({
+    provider,
+    category,
+    count,
+    error,
+  }))
+  const errors = diagnostics.filter((diagnostic) => diagnostic.error).length
 
   const payload: FeedResponse = {
     generatedAt: new Date().toISOString(),
+    source: finalArticles.length ? "live" : "empty",
     cacheHit: false,
+    message: finalArticles.length
+      ? errors > 0 ? `${errors} news provider${errors === 1 ? "" : "s"} skipped this refresh.` : null
+      : "News providers returned no usable stories.",
+    providerDiagnostics: diagnostics,
     articles: finalArticles,
   }
 

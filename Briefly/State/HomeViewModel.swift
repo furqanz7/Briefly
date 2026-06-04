@@ -297,7 +297,7 @@ final class HomeViewModel: ObservableObject {
         do {
             let response = try await marketService.searchCryptoSnapshots(query: query)
             cryptoSearchSnapshots = response.snapshots
-            cryptoSearchStatusMessage = response.message
+            cryptoSearchStatusMessage = response.providerStatusMessage
         } catch {
             cryptoSearchSnapshots = []
             cryptoSearchStatusMessage = error.localizedDescription
@@ -408,7 +408,7 @@ final class HomeViewModel: ObservableObject {
         do {
             let response = try await marketService.fetchSnapshots()
             marketSnapshots = response.snapshots
-            marketStatusMessage = response.message
+            marketStatusMessage = response.providerStatusMessage
             marketUpdatedAt = response.updatedAt ?? response.generatedAt
             WidgetSnapshotStore.saveMarket(marketSnapshots)
         } catch let error as MarketServiceError {
@@ -438,7 +438,7 @@ final class HomeViewModel: ObservableObject {
         do {
             let response = try await marketService.fetchCryptoSnapshots()
             cryptoSnapshots = response.snapshots
-            cryptoStatusMessage = response.message
+            cryptoStatusMessage = response.providerStatusMessage
             cryptoUpdatedAt = response.updatedAt ?? response.generatedAt
             WidgetSnapshotStore.saveCrypto(cryptoSnapshots)
         } catch {
@@ -459,7 +459,7 @@ final class HomeViewModel: ObservableObject {
         do {
             let response = try await marketService.fetchTrendingCryptoSnapshots()
             trendingCryptoSnapshots = response.snapshots
-            trendingCryptoStatusMessage = response.message
+            trendingCryptoStatusMessage = response.providerStatusMessage
         } catch {
             trendingCryptoStatusMessage = error.localizedDescription
         }
@@ -471,7 +471,7 @@ final class HomeViewModel: ObservableObject {
         do {
             let response = try await marketService.fetchCryptoStats()
             cryptoStats = response.stats
-            cryptoStatsStatusMessage = response.message
+            cryptoStatsStatusMessage = response.providerStatusMessage
         } catch {
             cryptoStatsStatusMessage = error.localizedDescription
         }
@@ -484,7 +484,7 @@ final class HomeViewModel: ObservableObject {
             let response = try await marketService.fetchCryptoMovers()
             cryptoGainers = response.gainers
             cryptoLosers = response.losers
-            cryptoMoversStatusMessage = response.message
+            cryptoMoversStatusMessage = response.providerStatusMessage
         } catch {
             cryptoMoversStatusMessage = error.localizedDescription
         }

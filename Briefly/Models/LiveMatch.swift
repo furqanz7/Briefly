@@ -37,6 +37,35 @@ struct LiveScoresResponse: Decodable {
         self.recentSports = recentSports
     }
 
+    var providerStatusMessage: String? {
+        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedMessage, !trimmedMessage.isEmpty {
+            return trimmedMessage
+        }
+
+        if !providerConfigured {
+            return "Live scores need a configured sports provider."
+        }
+
+        if cacheHit {
+            return "Showing cached scores while providers refresh."
+        }
+
+        return nil
+    }
+
+    func withProviderMessage(_ message: String) -> LiveScoresResponse {
+        LiveScoresResponse(
+            generatedAt: .now,
+            cacheHit: true,
+            providerConfigured: providerConfigured,
+            message: message,
+            sports: sports,
+            upcomingSports: upcomingSports,
+            recentSports: recentSports
+        )
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         generatedAt = try container.decode(Date.self, forKey: .generatedAt)

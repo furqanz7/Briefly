@@ -175,7 +175,7 @@ final class SportsViewModel: ObservableObject {
             upcomingSports = response.upcomingSports.filter { $0.matchCount > 0 }
             recentSports = response.recentSports.filter { $0.matchCount > 0 }
             providerConfigured = response.providerConfigured
-            providerMessage = response.message
+            providerMessage = response.providerStatusMessage
             lastUpdatedAt = response.generatedAt
             errorMessage = nil
             WidgetSnapshotStore.saveSports(sports)

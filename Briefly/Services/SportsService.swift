@@ -49,11 +49,18 @@ struct SportsService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.cachePolicy = forceRefresh ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy
 
-        let (data, http) = try await HTTPClient.data(for: request)
-        let payload = try HTTPClient.requireSuccess(data, http)
-        let response = try JSONDecoder.supabase.decode(LiveScoresResponse.self, from: payload)
-        Self.store(response)
-        return response
+        do {
+            let (data, http) = try await HTTPClient.data(for: request)
+            let payload = try HTTPClient.requireSuccess(data, http)
+            let response = try JSONDecoder.supabase.decode(LiveScoresResponse.self, from: payload)
+            Self.store(response)
+            return response
+        } catch {
+            if let cached = Self.cachedResponse, cached.sports.contains(where: { $0.matchCount > 0 }) {
+                return cached.withProviderMessage("Showing cached scores because live providers are unavailable.")
+            }
+            throw error
+        }
     }
 
     func fetchMatchDetail(for match: LiveMatch) async throws -> LiveMatchDetailResponse {

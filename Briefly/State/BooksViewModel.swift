@@ -25,6 +25,7 @@ final class BooksViewModel: ObservableObject {
     @Published var selectedBook: BookItem?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var providerMessage: String?
     @Published var readingSummary = ReadingSummary()
 
     private let service: BooksProviding
@@ -72,8 +73,11 @@ final class BooksViewModel: ObservableObject {
     func search() async {
         isLoading = true
         errorMessage = nil
+        providerMessage = nil
         do {
-            books = try await service.fetchBooks(query: activeQuery, genre: selectedGenre.rawValue)
+            let response = try await service.fetchBooks(query: activeQuery, genre: selectedGenre.rawValue)
+            books = response.books
+            providerMessage = response.providerStatusMessage
         } catch {
             errorMessage = "Books are unavailable right now."
         }

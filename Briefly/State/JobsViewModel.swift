@@ -107,7 +107,9 @@ final class JobsViewModel: ObservableObject {
         providerMessage = nil
         await loadAccountBackedJobs(session: session)
         do {
-            jobs = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
+            let response = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
+            jobs = response.jobs
+            providerMessage = response.providerStatusMessage
         } catch {
             errorMessage = "Jobs are unavailable right now."
         }
@@ -127,7 +129,9 @@ final class JobsViewModel: ObservableObject {
         passedJobs = []
         await loadAccountBackedJobs(session: session)
         do {
-            jobs = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
+            let response = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
+            jobs = response.jobs
+            providerMessage = response.providerStatusMessage
         } catch {
             errorMessage = "No jobs matched that search yet."
         }
@@ -223,11 +227,13 @@ final class JobsViewModel: ObservableObject {
         isLoadingDetail = true
         defer { isLoadingDetail = false }
         do {
-            let detail = try await service.fetchDetail(for: job, country: selectedCountry.providerCode)
+            let response = try await service.fetchDetail(for: job, country: selectedCountry.providerCode)
+            let detail = response.jobs.first ?? job
             replace(job: detail)
             if selectedJob?.id == detail.id {
                 selectedJob = detail
             }
+            providerMessage = response.providerStatusMessage
         } catch {
             providerMessage = "Detailed job data is unavailable right now."
         }

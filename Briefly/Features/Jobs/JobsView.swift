@@ -15,7 +15,8 @@ struct JobsView: View {
                 let horizontalPadding: CGFloat = 20
                 let contentWidth = max(proxy.size.width - horizontalPadding * 2, 0)
                 let bottomReserve: CGFloat = 20
-                let deckHeight = max(470, min(660, proxy.size.height - bottomReserve - 130))
+                let providerReserve: CGFloat = viewModel.providerMessage == nil ? 130 : 162
+                let deckHeight = max(470, min(660, proxy.size.height - bottomReserve - providerReserve))
 
                 VStack(alignment: .leading, spacing: 14) {
                     header
@@ -130,7 +131,13 @@ struct JobsView: View {
     }
 
     private var compactControls: some View {
-        searchBar
+        VStack(alignment: .leading, spacing: 8) {
+            searchBar
+
+            if let message = viewModel.providerMessage, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                JobsProviderStatusPill(message: message)
+            }
+        }
     }
 
     private var searchBar: some View {
@@ -918,6 +925,30 @@ private struct JobPreferenceChip: View {
                 .stroke(isSelected ? selectedTint.opacity(0.55) : BrieflyTheme.divider, lineWidth: 1)
         }
         .contentShape(Capsule())
+    }
+}
+
+private struct JobsProviderStatusPill: View {
+    let message: String
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "network")
+                .font(.system(size: 11, weight: .heavy))
+                .foregroundStyle(BrieflyTheme.accent)
+
+            Text(message)
+                .font(.system(size: 12, weight: .heavy))
+                .foregroundStyle(BrieflyTheme.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 7)
+        .background(BrieflyTheme.elevatedCard.opacity(0.72), in: Capsule())
+        .overlay {
+            Capsule().stroke(BrieflyTheme.divider.opacity(0.72), lineWidth: 1)
+        }
     }
 }
 

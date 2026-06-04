@@ -18,8 +18,8 @@ enum JobsServiceError: LocalizedError {
 }
 
 protocol JobsProviding {
-    func fetchJobs(query: String, country: String) async throws -> [JobListing]
-    func fetchDetail(for job: JobListing, country: String) async throws -> JobListing
+    func fetchJobs(query: String, country: String) async throws -> JobsDataResponse
+    func fetchDetail(for job: JobListing, country: String) async throws -> JobsDataResponse
 }
 
 struct JobsDataResponse: Decodable {
@@ -32,14 +32,78 @@ struct JobsDataResponse: Decodable {
     let expiresAt: Date?
     let message: String?
     let jobs: [JobListing]
+
+    var providerStatusMessage: String? {
+        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedMessage, !trimmedMessage.isEmpty {
+            return trimmedMessage
+        }
+
+        if source == "fixture" {
+            return "Showing sample roles while job providers are unavailable."
+        }
+
+        if stale {
+            return "Showing saved provider results while live jobs refresh."
+        }
+
+        if cacheHit {
+            return "Showing cached job matches."
+        }
+
+        return nil
+    }
+
+    static func fixture(message: String? = nil) -> JobsDataResponse {
+        JobsDataResponse(
+            generatedAt: .now,
+            source: "fixture",
+            provider: nil,
+            cacheHit: false,
+            stale: true,
+            updatedAt: nil,
+            expiresAt: nil,
+            message: message ?? "Jobs providers are not configured yet.",
+            jobs: JobListing.fixtures
+        )
+    }
+
+    func withProviderMessage(_ message: String) -> JobsDataResponse {
+        JobsDataResponse(
+            generatedAt: .now,
+            source: cacheHit ? source : "cached",
+            provider: provider,
+            cacheHit: true,
+            stale: true,
+            updatedAt: updatedAt ?? generatedAt,
+            expiresAt: expiresAt,
+            message: message,
+            jobs: jobs
+        )
+    }
 }
 
 struct JobsService: JobsProviding {
+    private struct CachedResponse {
+        let response: JobsDataResponse
+        let storedAt: Date
+    }
+
+    private static var cachedResponses: [String: CachedResponse] = [:]
+    private static let cacheTTL: TimeInterval = 180
+
     private let config = AppConfig.shared
 
-    func fetchJobs(query: String = "ios developer remote", country: String = "us") async throws -> [JobListing] {
+    func fetchJobs(query: String = "ios developer remote", country: String = "us") async throws -> JobsDataResponse {
+        let key = cacheKey(query: query, country: country)
+        if let cached = validCachedResponse(for: key) {
+            return cached
+        }
+
         guard let url = config.jobsDataFunctionURL, config.hasSupabase else {
-            return JobListing.fixtures
+            let response = JobsDataResponse.fixture()
+            Self.store(response, for: key)
+            return response
         }
 
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -58,20 +122,38 @@ struct JobsService: JobsProviding {
         request.setValue("Bearer \(config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let (data, http) = try await HTTPClient.data(for: request)
-        let payload = try HTTPClient.requireSuccess(data, http)
-        let response = try JSONDecoder.supabase.decode(JobsDataResponse.self, from: payload)
+        do {
+            let (data, http) = try await HTTPClient.data(for: request)
+            let payload = try HTTPClient.requireSuccess(data, http)
+            let response = try JSONDecoder.supabase.decode(JobsDataResponse.self, from: payload)
 
-        guard !response.jobs.isEmpty else {
-            throw JobsServiceError.unavailable(response.message ?? "No jobs are available yet.")
+            guard !response.jobs.isEmpty else {
+                throw JobsServiceError.unavailable(response.message ?? "No jobs are available yet.")
+            }
+
+            Self.store(response, for: key)
+            return response
+        } catch {
+            if let cached = Self.cachedResponses[key]?.response, !cached.jobs.isEmpty {
+                return cached.withProviderMessage("Showing cached job matches because live providers are unavailable.")
+            }
+            throw error
         }
-
-        return response.jobs
     }
 
-    func fetchDetail(for job: JobListing, country: String = "us") async throws -> JobListing {
+    func fetchDetail(for job: JobListing, country: String = "us") async throws -> JobsDataResponse {
         guard let url = config.jobsDataFunctionURL, config.hasSupabase else {
-            return job
+            return JobsDataResponse(
+                generatedAt: .now,
+                source: "fixture",
+                provider: nil,
+                cacheHit: false,
+                stale: true,
+                updatedAt: nil,
+                expiresAt: nil,
+                message: "Job detail providers are not configured yet.",
+                jobs: [job]
+            )
         }
 
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -92,21 +174,68 @@ struct JobsService: JobsProviding {
         request.setValue("Bearer \(config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let (data, http) = try await HTTPClient.data(for: request)
-        let payload = try HTTPClient.requireSuccess(data, http)
-        let response = try JSONDecoder.supabase.decode(JobsDataResponse.self, from: payload)
+        do {
+            let (data, http) = try await HTTPClient.data(for: request)
+            let payload = try HTTPClient.requireSuccess(data, http)
+            let response = try JSONDecoder.supabase.decode(JobsDataResponse.self, from: payload)
 
-        return response.jobs.first ?? job
+            guard !response.jobs.isEmpty else {
+                throw JobsServiceError.unavailable(response.message ?? "No job detail is available yet.")
+            }
+
+            return response
+        } catch {
+            return JobsDataResponse(
+                generatedAt: .now,
+                source: "cached",
+                provider: nil,
+                cacheHit: true,
+                stale: true,
+                updatedAt: nil,
+                expiresAt: nil,
+                message: "Detailed provider data is unavailable right now.",
+                jobs: [job]
+            )
+        }
+    }
+
+    private func validCachedResponse(for key: String) -> JobsDataResponse? {
+        guard let cached = Self.cachedResponses[key],
+              Date().timeIntervalSince(cached.storedAt) < Self.cacheTTL,
+              !cached.response.jobs.isEmpty else {
+            return nil
+        }
+        return cached.response
+    }
+
+    private static func store(_ response: JobsDataResponse, for key: String) {
+        guard !response.jobs.isEmpty else { return }
+        cachedResponses[key] = CachedResponse(response: response, storedAt: .now)
+    }
+
+    private func cacheKey(query: String, country: String) -> String {
+        let queryKey = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return "\(country.lowercased())|\(queryKey)"
     }
 }
 
 struct FixtureJobsService: JobsProviding {
-    func fetchJobs(query: String = "ios developer remote", country: String = "us") async throws -> [JobListing] {
-        JobListing.fixtures
+    func fetchJobs(query: String = "ios developer remote", country: String = "us") async throws -> JobsDataResponse {
+        JobsDataResponse.fixture(message: "Showing fixture jobs for previews.")
     }
 
-    func fetchDetail(for job: JobListing, country: String = "us") async throws -> JobListing {
-        job
+    func fetchDetail(for job: JobListing, country: String = "us") async throws -> JobsDataResponse {
+        JobsDataResponse(
+            generatedAt: .now,
+            source: "fixture",
+            provider: nil,
+            cacheHit: false,
+            stale: false,
+            updatedAt: nil,
+            expiresAt: nil,
+            message: "Showing fixture job detail for previews.",
+            jobs: [job]
+        )
     }
 }
 
