@@ -26,18 +26,13 @@ struct BooksDataResponse: Decodable {
     let books: [BookItem]
 
     var providerStatusMessage: String? {
-        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let trimmedMessage, !trimmedMessage.isEmpty {
-            return trimmedMessage
-        }
-
         switch source {
         case "fixture":
-            return "Showing sample books while providers are unavailable."
+            return "Showing sample books while the library refreshes."
         case "fallback":
-            return "Showing public book providers while Briefly refreshes."
+            return "Showing library results while Briefly refreshes."
         case "cached":
-            return "Showing cached book results."
+            return "Showing saved book results while refreshing."
         default:
             return nil
         }

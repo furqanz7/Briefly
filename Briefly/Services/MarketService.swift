@@ -36,11 +36,6 @@ struct MarketDataResponse: Decodable {
     }
 
     private func normalizedProviderMessage(cachedLabel: String, staleLabel: String) -> String? {
-        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let trimmedMessage, !trimmedMessage.isEmpty {
-            return trimmedMessage
-        }
-
         if stale || source == .stale {
             return staleLabel
         }
@@ -65,10 +60,6 @@ struct CryptoStatsResponse: Decodable {
     let stats: CryptoStats
 
     var providerStatusMessage: String? {
-        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let trimmedMessage, !trimmedMessage.isEmpty {
-            return trimmedMessage
-        }
         if stale || source == .stale {
             return "Showing saved crypto stats while live providers refresh."
         }
@@ -101,10 +92,6 @@ struct CryptoMoversResponse: Decodable {
     let losers: [MarketSnapshot]
 
     var providerStatusMessage: String? {
-        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let trimmedMessage, !trimmedMessage.isEmpty {
-            return trimmedMessage
-        }
         if stale || source == .stale {
             return "Showing saved crypto movers while live providers refresh."
         }

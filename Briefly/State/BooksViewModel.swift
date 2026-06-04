@@ -77,7 +77,6 @@ final class BooksViewModel: ObservableObject {
         do {
             let response = try await service.fetchBooks(query: activeQuery, genre: selectedGenre.rawValue)
             books = response.books
-            providerMessage = response.providerStatusMessage
         } catch {
             errorMessage = "Books are unavailable right now."
         }

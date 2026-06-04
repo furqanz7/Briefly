@@ -902,21 +902,22 @@ function normalizedURL(value: string | null | undefined) {
   return null
 }
 
-function firstString(record: Record<string, unknown>, keys: string[]) {
+function firstString(record: Record<string, unknown>, keys: string[]): string | null {
   for (const key of keys) {
-    const direct = stringFrom(record[key])
+    const value = record[key]
+    const direct = stringFrom(value)
     if (direct) return direct
-    if (Array.isArray(record[key])) {
-      const values = record[key].flatMap((value) => {
-        const text = stringFrom(value)
+    if (Array.isArray(value)) {
+      const values: string[] = value.flatMap((item: unknown): string[] => {
+        const text = stringFrom(item)
         if (text) return [text]
-        const nested = objectFrom(value)
+        const nested = objectFrom(item)
         const nestedText = nested ? firstString(nested, ["name", "title", "text", "value"]) : null
         return nestedText ? [nestedText] : []
       })
       if (values.length) return values.join(", ")
     }
-    const nested = objectFrom(record[key])
+    const nested = objectFrom(value)
     if (nested) {
       const nestedText = firstString(nested, ["name", "title", "text", "value", "url", "href"])
       if (nestedText) return nestedText
@@ -925,10 +926,10 @@ function firstString(record: Record<string, unknown>, keys: string[]) {
   return null
 }
 
-function firstStringArray(record: Record<string, unknown>, keys: string[]) {
+function firstStringArray(record: Record<string, unknown>, keys: string[]): string[] {
   const value = firstString(record, keys)
   if (!value) return []
-  return value.split(/,\s*|;\s*|\s+and\s+/).map((item) => item.trim()).filter(Boolean)
+  return value.split(/,\s*|;\s*|\s+and\s+/).map((item: string) => item.trim()).filter(Boolean)
 }
 
 function publishedYearFrom(record: Record<string, unknown>) {
@@ -963,7 +964,6 @@ Deno.serve(async (request) => {
   const genre = url.searchParams.get("genre")?.trim() || "All"
   const debugProviders = url.searchParams.get("debugProviders") === "1"
   const scope = slug(`${query}-${genre}`) || "default"
-  const errors: string[] = []
   const groups: BookItem[][] = []
 
   const providers = [
@@ -988,7 +988,6 @@ Deno.serve(async (request) => {
 
   for (const result of results) {
     if (result.books.length) groups.push(result.books)
-    if (result.error) errors.push(result.error)
   }
 
   const books = interleaveBySource(groups).slice(0, 96)
@@ -996,8 +995,8 @@ Deno.serve(async (request) => {
     return json(200, {
       generatedAt: new Date().toISOString(),
       source: "fixture",
-      message: errors.join(" | ") || "No books are available yet.",
-      providerDiagnostics: providerDiagnostics(results),
+      message: "Showing sample books while the library refreshes.",
+      providerDiagnostics: debugProviders ? providerDiagnostics(results) : [],
       books: fixtureBooks,
     })
   }
@@ -1006,7 +1005,7 @@ Deno.serve(async (request) => {
     generatedAt: new Date().toISOString(),
     source: "live",
     message: null,
-    providerDiagnostics: providerDiagnostics(results),
+    providerDiagnostics: debugProviders ? providerDiagnostics(results) : [],
     books,
   })
 })

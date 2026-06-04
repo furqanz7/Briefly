@@ -35,7 +35,6 @@ struct BooksView: View {
                     readingTracker
                     searchBar
                     genreRow
-                    providerStatus
 
                     if viewModel.isLoading {
                         BooksLoadingCard()
@@ -534,29 +533,6 @@ struct BooksView: View {
         let hours = minutes / 60
         let remainder = minutes % 60
         return remainder == 0 ? "\(hours)h" : "\(hours)h \(remainder)m"
-    }
-
-    @ViewBuilder
-    private var providerStatus: some View {
-        if let message = viewModel.providerMessage, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            HStack(spacing: 8) {
-                Image(systemName: "network")
-                    .font(.system(size: 12, weight: .heavy))
-                    .foregroundStyle(BrieflyTheme.accent)
-
-                Text(message)
-                    .font(.system(size: 13, weight: .heavy))
-                    .foregroundStyle(BrieflyTheme.secondaryText)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.78)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(BrieflyTheme.elevatedCard.opacity(0.74), in: Capsule())
-            .overlay {
-                Capsule().stroke(BrieflyTheme.divider.opacity(0.72), lineWidth: 1)
-            }
-        }
     }
 
     private var readingGoalLabel: String {

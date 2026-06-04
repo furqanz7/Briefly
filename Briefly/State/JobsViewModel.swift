@@ -109,7 +109,6 @@ final class JobsViewModel: ObservableObject {
         do {
             let response = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
             jobs = response.jobs
-            providerMessage = response.providerStatusMessage
         } catch {
             errorMessage = "Jobs are unavailable right now."
         }
@@ -131,7 +130,6 @@ final class JobsViewModel: ObservableObject {
         do {
             let response = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
             jobs = response.jobs
-            providerMessage = response.providerStatusMessage
         } catch {
             errorMessage = "No jobs matched that search yet."
         }
@@ -233,7 +231,6 @@ final class JobsViewModel: ObservableObject {
             if selectedJob?.id == detail.id {
                 selectedJob = detail
             }
-            providerMessage = response.providerStatusMessage
         } catch {
             providerMessage = "Detailed job data is unavailable right now."
         }

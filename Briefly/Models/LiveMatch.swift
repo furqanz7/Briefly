@@ -38,17 +38,12 @@ struct LiveScoresResponse: Decodable {
     }
 
     var providerStatusMessage: String? {
-        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let trimmedMessage, !trimmedMessage.isEmpty {
-            return trimmedMessage
-        }
-
         if !providerConfigured {
-            return "Live scores need a configured sports provider."
+            return "Live scores are unavailable right now."
         }
 
         if cacheHit {
-            return "Showing cached scores while providers refresh."
+            return "Showing saved scores while refreshing."
         }
 
         return nil

@@ -176,9 +176,9 @@ struct SportsView: View {
             )
         } else if !viewModel.providerConfigured {
             SportsMessageCard(
-                icon: "key.fill",
-                title: "Connect live scores",
-                message: viewModel.providerMessage ?? "Add a live-scores provider key to Supabase before publishing this page."
+                icon: "sportscourt.fill",
+                title: "Live scores unavailable",
+                message: "Scores are temporarily unavailable. Check back soon."
             )
         } else if viewModel.isLoading && !viewModel.hasCurrentFeedItems {
             loadingStack

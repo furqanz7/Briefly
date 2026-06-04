@@ -131,6 +131,8 @@ const providerBudgets: Record<ProviderID, ProviderBudgetConfig> = {
   },
 }
 
+const publicCachedJobsMessage = "Showing saved job matches while refreshing."
+
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders })
 }
@@ -302,12 +304,12 @@ async function runWithBudget(providerID: ProviderID, scope: string, run: () => P
 
   const blockedUntil = usage.blocked_until ? Date.parse(usage.blocked_until) : 0
   if (blockedUntil > now) {
-    if (snapshot) return responseFromSnapshot(providerID, snapshot, `Showing cached jobs because ${providerLabel(providerID)} quota is paused.`)
+    if (snapshot) return responseFromSnapshot(providerID, snapshot, publicCachedJobsMessage)
     throw new Error(`${providerLabel(providerID)} is paused until ${iso(new Date(blockedUntil))}.`)
   }
 
   if (usage.used_count >= usage.auto_limit) {
-    if (snapshot) return responseFromSnapshot(providerID, snapshot, `Showing cached jobs because ${providerLabel(providerID)} quota is exhausted.`)
+    if (snapshot) return responseFromSnapshot(providerID, snapshot, publicCachedJobsMessage)
     throw new Error(`${providerLabel(providerID)} automatic ${usage.period} quota is exhausted.`)
   }
 
@@ -338,7 +340,7 @@ async function runWithBudget(providerID: ProviderID, scope: string, run: () => P
       last_error: message.slice(0, 500),
       updated_at: nowISO,
     })
-    if (snapshot) return responseFromSnapshot(providerID, snapshot, `Showing cached jobs because ${providerLabel(providerID)} failed.`)
+    if (snapshot) return responseFromSnapshot(providerID, snapshot, publicCachedJobsMessage)
     throw error
   }
 }
@@ -371,7 +373,7 @@ function combinedResponse(responses: JobsResponse[]): JobsResponse {
     stale: responses.every((response) => response.stale),
     updatedAt: responses.map((response) => response.updatedAt).filter(Boolean).sort().at(-1) ?? null,
     expiresAt: responses.map((response) => response.expiresAt).filter(Boolean).sort()[0] ?? null,
-    message: responses.map((response) => response.message).filter(Boolean).join(" ") || null,
+    message: responses.some((response) => response.message) ? publicCachedJobsMessage : null,
     jobs,
   }
 }
@@ -1338,7 +1340,7 @@ Deno.serve(async (request) => {
       stale: true,
       updatedAt: null,
       expiresAt: null,
-      message: errorMessage(error),
+      message: "Showing sample jobs while matches refresh.",
       jobs: fixtureJobs,
     } satisfies JobsResponse)
   }

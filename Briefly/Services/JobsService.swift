@@ -34,21 +34,12 @@ struct JobsDataResponse: Decodable {
     let jobs: [JobListing]
 
     var providerStatusMessage: String? {
-        let trimmedMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let trimmedMessage, !trimmedMessage.isEmpty {
-            return trimmedMessage
-        }
-
         if source == "fixture" {
-            return "Showing sample roles while job providers are unavailable."
+            return "Showing sample roles while jobs refresh."
         }
 
-        if stale {
-            return "Showing saved provider results while live jobs refresh."
-        }
-
-        if cacheHit {
-            return "Showing cached job matches."
+        if stale || cacheHit {
+            return "Showing saved job matches while refreshing."
         }
 
         return nil
