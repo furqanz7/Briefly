@@ -32,6 +32,7 @@ final class BooksViewModel: ObservableObject {
     private let store: LocalSavedBooksStore
     private let savedService: SavedBooksService
     private let defaultQuery = "bestsellers"
+    private let booksCacheMaxAge: TimeInterval = 24 * 60 * 60
     var readingMinutesToday: Int { readingSummary.todayMinutes }
     var readingGoalMinutes: Int { readingSummary.dailyGoalMinutes }
 
@@ -66,17 +67,21 @@ final class BooksViewModel: ObservableObject {
 
     func load(session: UserSession?) async {
         guard books.isEmpty else { return }
+        hydrateCachedBooksIfNeeded()
         await loadAccountBackedLibrary(session: session)
         await search()
     }
 
     func search() async {
-        isLoading = true
+        hydrateCachedBooksIfNeeded()
+        isLoading = books.isEmpty
         errorMessage = nil
         providerMessage = nil
         do {
             let response = try await service.fetchBooks(query: activeQuery, genre: selectedGenre.rawValue)
             books = response.books
+            providerMessage = response.providerStatusMessage
+            AppFeedCache.save(response.books, key: booksCacheKey)
         } catch {
             errorMessage = "Books are unavailable right now."
         }
@@ -196,5 +201,21 @@ final class BooksViewModel: ObservableObject {
 
     private func syncWidgetSnapshot() {
         WidgetSnapshotStore.saveBooks(savedBooks: savedBooks, downloadedIDs: downloadedIDs, readingSummary: readingSummary)
+    }
+
+    private var booksCacheKey: String {
+        let query = activeQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return "books.feed.v2.\(selectedGenre.rawValue.lowercased()).\(query)"
+    }
+
+    private func hydrateCachedBooksIfNeeded() {
+        guard books.isEmpty,
+              let cached = AppFeedCache.load([BookItem].self, key: booksCacheKey, maxAge: booksCacheMaxAge),
+              !cached.value.isEmpty else {
+            return
+        }
+
+        books = cached.value
+        providerMessage = "Showing saved book results while refreshing."
     }
 }

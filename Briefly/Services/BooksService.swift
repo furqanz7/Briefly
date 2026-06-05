@@ -135,6 +135,7 @@ struct BooksService: BooksProviding {
 
         var request = URLRequest(url: finalURL)
         request.httpMethod = "GET"
+        request.timeoutInterval = 10
         request.setValue(config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -187,7 +188,8 @@ struct BooksService: BooksProviding {
             URLQueryItem(name: "printType", value: "books")
         ]
         guard let url = components?.url else { throw BooksServiceError.invalidResponse }
-        let (data, http) = try await HTTPClient.data(for: URLRequest(url: url))
+        let request = URLRequest(url: url, timeoutInterval: 10)
+        let (data, http) = try await HTTPClient.data(for: request)
         let payload = try HTTPClient.requireSuccess(data, http)
         let response = try JSONDecoder().decode(GoogleBooksResponse.self, from: payload)
         return response.items?.compactMap(\.bookItem) ?? []
@@ -200,7 +202,8 @@ struct BooksService: BooksProviding {
             URLQueryItem(name: "limit", value: "50")
         ]
         guard let url = components?.url else { throw BooksServiceError.invalidResponse }
-        let (data, http) = try await HTTPClient.data(for: URLRequest(url: url))
+        let request = URLRequest(url: url, timeoutInterval: 10)
+        let (data, http) = try await HTTPClient.data(for: request)
         let payload = try HTTPClient.requireSuccess(data, http)
         let response = try JSONDecoder().decode(OpenLibraryResponse.self, from: payload)
         return response.docs.compactMap(\.bookItem)
@@ -212,7 +215,8 @@ struct BooksService: BooksProviding {
             URLQueryItem(name: "search", value: genre == "All" ? query : "\(query) \(genre)")
         ]
         guard let url = components?.url else { throw BooksServiceError.invalidResponse }
-        let (data, http) = try await HTTPClient.data(for: URLRequest(url: url))
+        let request = URLRequest(url: url, timeoutInterval: 10)
+        let (data, http) = try await HTTPClient.data(for: request)
         let payload = try HTTPClient.requireSuccess(data, http)
         let response = try JSONDecoder().decode(GutendexResponse.self, from: payload)
         return response.results.compactMap(\.bookItem)

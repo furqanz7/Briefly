@@ -138,6 +138,7 @@ struct MarketService {
 
         var request = URLRequest(url: finalURL)
         request.httpMethod = "GET"
+        request.timeoutInterval = 10
         request.setValue(config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -197,6 +198,7 @@ struct MarketService {
 
         var request = URLRequest(url: finalURL)
         request.httpMethod = "GET"
+        request.timeoutInterval = 8
         request.setValue(config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -224,6 +226,7 @@ struct MarketService {
 
         var request = URLRequest(url: finalURL)
         request.httpMethod = "GET"
+        request.timeoutInterval = 8
         request.setValue(config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -257,6 +260,7 @@ struct MarketService {
 
         var request = URLRequest(url: finalURL)
         request.httpMethod = "GET"
+        request.timeoutInterval = 8
         request.setValue(config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

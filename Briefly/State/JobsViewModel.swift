@@ -59,6 +59,7 @@ final class JobsViewModel: ObservableObject {
     private let savedStore: LocalSavedJobsStore
     private let savedService: SavedJobsService
     private let defaultQuery = "ios developer remote"
+    private let jobsCacheMaxAge: TimeInterval = 12 * 60 * 60
     let quickSearches = ["iOS", "Backend", "Product", "Design", "Remote"]
 
     init(
@@ -102,13 +103,16 @@ final class JobsViewModel: ObservableObject {
 
     func load(session: UserSession?) async {
         guard jobs.isEmpty else { return }
-        isLoading = true
+        hydrateCachedJobsIfNeeded()
+        isLoading = jobs.isEmpty
         errorMessage = nil
         providerMessage = nil
         await loadAccountBackedJobs(session: session)
         do {
             let response = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
             jobs = response.jobs
+            providerMessage = response.providerStatusMessage
+            AppFeedCache.save(response.jobs, key: jobsCacheKey)
         } catch {
             errorMessage = "Jobs are unavailable right now."
         }
@@ -116,13 +120,13 @@ final class JobsViewModel: ObservableObject {
     }
 
     func refresh(session: UserSession?) async {
-        jobs = []
         passedJobs = []
-        await load(session: session)
+        await search(session: session)
     }
 
     func search(session: UserSession?) async {
-        isLoading = true
+        hydrateCachedJobsIfNeeded()
+        isLoading = jobs.isEmpty
         errorMessage = nil
         providerMessage = nil
         passedJobs = []
@@ -130,6 +134,8 @@ final class JobsViewModel: ObservableObject {
         do {
             let response = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
             jobs = response.jobs
+            providerMessage = response.providerStatusMessage
+            AppFeedCache.save(response.jobs, key: jobsCacheKey)
         } catch {
             errorMessage = "No jobs matched that search yet."
         }
@@ -273,6 +279,22 @@ final class JobsViewModel: ObservableObject {
 
     private func syncWidgetSnapshot() {
         WidgetSnapshotStore.saveJobs(saved: savedJobs, applied: appliedJobs)
+    }
+
+    private var jobsCacheKey: String {
+        let query = activeQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return "jobs.feed.v2.\(selectedCountry.providerCode).\(query)"
+    }
+
+    private func hydrateCachedJobsIfNeeded() {
+        guard jobs.isEmpty,
+              let cached = AppFeedCache.load([JobListing].self, key: jobsCacheKey, maxAge: jobsCacheMaxAge),
+              !cached.value.isEmpty else {
+            return
+        }
+
+        jobs = cached.value
+        providerMessage = "Showing saved job matches while refreshing."
     }
 
     private var filteredJobs: [JobListing] {

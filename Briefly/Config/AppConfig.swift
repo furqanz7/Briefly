@@ -39,7 +39,13 @@ struct AppConfig {
             dictionary[key] as? String ?? fallback
         }
 
-        let nativeHomeAdUnitID = string("ADMOB_NATIVE_HOME_AD_UNIT_ID", fallback: Self.admobNativeTestAdUnitID)
+        #if DEBUG
+        let nativeAdFallback = Self.admobNativeTestAdUnitID
+        #else
+        let nativeAdFallback = ""
+        #endif
+
+        let nativeHomeAdUnitID = string("ADMOB_NATIVE_HOME_AD_UNIT_ID", fallback: nativeAdFallback)
         let nativeCategoryAdUnitID = string("ADMOB_NATIVE_CATEGORY_AD_UNIT_ID", fallback: nativeHomeAdUnitID)
         let nativeArticleAdUnitID = string("ADMOB_NATIVE_ARTICLE_AD_UNIT_ID", fallback: nativeHomeAdUnitID)
         let nativeSportsAdUnitID = string("ADMOB_NATIVE_SPORTS_AD_UNIT_ID", fallback: nativeHomeAdUnitID)

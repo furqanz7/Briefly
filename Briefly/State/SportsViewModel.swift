@@ -70,6 +70,8 @@ final class SportsViewModel: ObservableObject {
 
     private let sportsService = SportsService()
     private var isFetching = false
+    private let sportsCacheKey = "sports.live.feed.v2"
+    private let sportsCacheMaxAge: TimeInterval = 6 * 60 * 60
 
     var feedTitle: String {
         selectedFeed.title
@@ -157,8 +159,9 @@ final class SportsViewModel: ObservableObject {
     func load(force: Bool = false, showsLoading: Bool = true) async {
         if isFetching { return }
         isFetching = true
+        hydrateCachedSportsIfNeeded()
         if showsLoading {
-            isLoading = true
+            isLoading = !hasCurrentFeedItems
             errorMessage = nil
         }
 
@@ -178,6 +181,7 @@ final class SportsViewModel: ObservableObject {
             providerMessage = nil
             lastUpdatedAt = response.generatedAt
             errorMessage = nil
+            AppFeedCache.save(response, key: sportsCacheKey)
             WidgetSnapshotStore.saveSports(sports)
 
             if selectedSportID != "all",
@@ -207,5 +211,23 @@ final class SportsViewModel: ObservableObject {
            !currentSports.contains(where: { $0.id == selectedSportID }) {
             selectedSportID = "all"
         }
+    }
+
+    private func hydrateCachedSportsIfNeeded() {
+        guard sports.isEmpty,
+              upcomingSports.isEmpty,
+              recentSports.isEmpty,
+              let cached = AppFeedCache.load(LiveScoresResponse.self, key: sportsCacheKey, maxAge: sportsCacheMaxAge) else {
+            return
+        }
+
+        let response = cached.value
+        sports = response.sports.filter { $0.matchCount > 0 }
+        upcomingSports = response.upcomingSports.filter { $0.matchCount > 0 }
+        recentSports = response.recentSports.filter { $0.matchCount > 0 }
+        providerConfigured = response.providerConfigured
+        providerMessage = "Showing saved scores while refreshing."
+        lastUpdatedAt = cached.storedAt
+        WidgetSnapshotStore.saveSports(sports)
     }
 }

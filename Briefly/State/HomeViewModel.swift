@@ -34,6 +34,8 @@ final class HomeViewModel: ObservableObject {
     private var searchTask: Task<Void, Never>?
     private let desiredFeedCount = 48
     private let autoRefreshInterval: TimeInterval = 600
+    private let feedCacheMaxAge: TimeInterval = 6 * 60 * 60
+    private let feedCacheKey = "home.news.feed.v2"
 
     var availableCategories: [NewsCategory] {
         NewsCategory.allCases
@@ -124,6 +126,10 @@ final class HomeViewModel: ObservableObject {
             savedIDs = []
         }
 
+        if !force {
+            hydrateCachedFeedIfNeeded(desiredCount: desiredCount)
+        }
+
         if !force,
            !allArticles.isEmpty,
            let lastUpdatedAt,
@@ -138,7 +144,7 @@ final class HomeViewModel: ObservableObject {
             }
         }
 
-        isLoading = true
+        isLoading = allArticles.isEmpty
         defer { isLoading = false }
 
         do {
@@ -159,6 +165,7 @@ final class HomeViewModel: ObservableObject {
 
             featuredArticles = Array(applyCategoryFilter(allArticles).prefix(3))
             lastUpdatedAt = .now
+            AppFeedCache.save(allArticles, key: feedCacheKey)
             WidgetSnapshotStore.saveNews(allArticles)
             if marketSnapshots.isEmpty {
                 marketSnapshots = MarketSnapshot.placeholders
@@ -321,7 +328,22 @@ final class HomeViewModel: ObservableObject {
         allArticles = dedupeArticles(articles + allArticles)
         featuredArticles = Array(applyCategoryFilter(allArticles).prefix(3))
         lastUpdatedAt = .now
+        AppFeedCache.save(allArticles, key: feedCacheKey)
         await refreshSearchResults()
+    }
+
+    private func hydrateCachedFeedIfNeeded(desiredCount: Int) {
+        guard allArticles.isEmpty,
+              let cached = AppFeedCache.load([Article].self, key: feedCacheKey, maxAge: feedCacheMaxAge),
+              !cached.value.isEmpty else {
+            return
+        }
+
+        allArticles = Array(cached.value.prefix(max(desiredCount, desiredFeedCount)))
+        featuredArticles = Array(applyCategoryFilter(allArticles).prefix(3))
+        lastUpdatedAt = cached.storedAt
+        searchResult = .articles(applyCategoryFilter(defaultPickSource))
+        WidgetSnapshotStore.saveNews(allArticles)
     }
 
     private func dedupeArticles(_ articles: [Article]) -> [Article] {

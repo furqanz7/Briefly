@@ -1,6 +1,6 @@
 import Foundation
 
-struct LiveScoresResponse: Decodable {
+struct LiveScoresResponse: Codable {
     let generatedAt: Date
     let cacheHit: Bool
     let providerConfigured: Bool
@@ -73,13 +73,13 @@ struct LiveScoresResponse: Decodable {
     }
 }
 
-struct LiveMatchDetailResponse: Decodable {
+struct LiveMatchDetailResponse: Codable {
     let generatedAt: Date
     let match: LiveMatch
     let scoreboardSections: [ScoreboardSection]
 }
 
-struct LiveSportSection: Decodable, Identifiable, Hashable {
+struct LiveSportSection: Codable, Identifiable, Hashable {
     let id: String
     let name: String
     let icon: String
@@ -90,14 +90,14 @@ struct LiveSportSection: Decodable, Identifiable, Hashable {
     }
 }
 
-struct LiveCompetition: Decodable, Identifiable, Hashable {
+struct LiveCompetition: Codable, Identifiable, Hashable {
     let id: String
     let name: String
     let country: String?
     let matches: [LiveMatch]
 }
 
-struct LiveMatch: Decodable, Identifiable, Hashable {
+struct LiveMatch: Codable, Identifiable, Hashable {
     let id: String
     let providerID: String?
     let detailID: String?
@@ -143,7 +143,7 @@ struct LiveMatch: Decodable, Identifiable, Hashable {
     }
 }
 
-struct ScoreboardSection: Decodable, Identifiable, Hashable {
+struct ScoreboardSection: Codable, Identifiable, Hashable {
     let id: String
     let title: String
     let subtitle: String?
@@ -151,7 +151,7 @@ struct ScoreboardSection: Decodable, Identifiable, Hashable {
     let rows: [ScoreboardRow]
 }
 
-struct ScoreboardRow: Decodable, Identifiable, Hashable {
+struct ScoreboardRow: Codable, Identifiable, Hashable {
     let id: String
     let cells: [String]
     let note: String?
