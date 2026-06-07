@@ -59,7 +59,17 @@ type ProviderTaskResult = ProviderDiagnostic & {
   articles: Article[]
 }
 
+type FeedSnapshotRecord = {
+  scope: string
+  payload: FeedResponse
+  generated_at: string
+  expires_at: string
+  updated_at: string
+}
+
 const feedCache = new Map<string, CacheEntry>()
+const providerFetchTimeoutMS = 3_500
+const providerConcurrency = 12
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -82,6 +92,84 @@ function startOfDayISO(date: Date) {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
   return d.toISOString().slice(0, 10)
+}
+
+function env(name: string) {
+  return Deno.env.get(name)?.trim() ?? ""
+}
+
+function supabaseRESTCredentials() {
+  const url = env("SUPABASE_URL")
+  const key = env("SUPABASE_SERVICE_ROLE_KEY") || env("SUPABASE_SERVICE_KEY")
+  if (!url || !key) return null
+  return { baseURL: `${url.replace(/\/+$/, "")}/rest/v1`, key }
+}
+
+async function supabaseREST<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const credentials = supabaseRESTCredentials()
+  if (!credentials) throw new Error("Supabase service role secret is not configured for news feed snapshots.")
+
+  const response = await fetch(`${credentials.baseURL}/${path}`, {
+    ...init,
+    headers: {
+      "apikey": credentials.key,
+      "authorization": `Bearer ${credentials.key}`,
+      "content-type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  })
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "")
+    throw new Error(`Supabase news feed store: HTTP ${response.status} ${body.slice(0, 160)}`)
+  }
+
+  if (response.status === 204) return undefined as T
+  const text = await response.text()
+  return (text ? JSON.parse(text) : undefined) as T
+}
+
+async function readFeedSnapshot(scope: string) {
+  if (!supabaseRESTCredentials()) return null
+
+  try {
+    const records = await supabaseREST<FeedSnapshotRecord[]>(
+      `news_feed_snapshots?scope=eq.${encodeURIComponent(scope)}&select=*`
+    )
+    return records[0] ?? null
+  } catch {
+    return null
+  }
+}
+
+async function writeFeedSnapshot(scope: string, payload: FeedResponse, ttlSeconds: number) {
+  if (!supabaseRESTCredentials() || payload.articles.length === 0) return
+
+  const now = Date.now()
+  try {
+    await supabaseREST<void>("news_feed_snapshots?on_conflict=scope", {
+      method: "POST",
+      headers: { "Prefer": "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify({
+        scope,
+        payload,
+        generated_at: new Date(now).toISOString(),
+        expires_at: new Date(now + ttlSeconds * 1000).toISOString(),
+        updated_at: new Date(now).toISOString(),
+      }),
+    })
+  } catch {
+    // Snapshot writes are best-effort; never fail the public feed because cache persistence failed.
+  }
+}
+
+function responseFromSnapshot(snapshot: FeedSnapshotRecord, message: string) {
+  return {
+    ...snapshot.payload,
+    source: "cached",
+    cacheHit: true,
+    message,
+  } satisfies FeedResponse
 }
 
 function categoryDisplayName(category: NewsCategory): string {
@@ -139,13 +227,28 @@ async function poolMap<T, R>(
   return results
 }
 
-async function fetchJSON(url: string, init?: RequestInit) {
-  const response = await fetch(url, init)
-  if (!response.ok) {
-    const body = await response.text().catch(() => "")
-    throw new Error(`httpStatus(${response.status}, ${body.slice(0, 180)})`)
+async function fetchJSON(url: string, init: RequestInit = {}, timeoutMS = providerFetchTimeoutMS) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMS)
+
+  try {
+    const response = await fetch(url, {
+      ...init,
+      signal: init.signal ?? controller.signal,
+    })
+    if (!response.ok) {
+      const body = await response.text().catch(() => "")
+      throw new Error(`httpStatus(${response.status}, ${body.slice(0, 180)})`)
+    }
+    return await response.json()
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(`providerTimeout(${timeoutMS}ms)`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
   }
-  return await response.json()
 }
 
 function errorMessage(error: unknown) {
@@ -674,13 +777,22 @@ Deno.serve(async (request) => {
   const cacheKey = `${fromDate}|${lang}|${country}|${desiredCount}`
   const now = Date.now()
   const cached = feedCache.get(cacheKey)
-  if (cached && cached.expiresAt > now) {
+  const hasFreshCache = cached && cached.expiresAt > now
+  if (hasFreshCache) {
     return json(200, {
       ...cached.payload,
       source: "cached",
       cacheHit: true,
       message: cached.payload.message ?? "Showing cached brief while providers refresh.",
     } satisfies FeedResponse)
+  }
+
+  const persistentSnapshot = await readFeedSnapshot(cacheKey)
+  const persistentSnapshotExpiresAt = persistentSnapshot ? Date.parse(persistentSnapshot.expires_at) : 0
+  if (persistentSnapshot && persistentSnapshotExpiresAt > now) {
+    const payload = responseFromSnapshot(persistentSnapshot, "Showing cached brief while providers refresh.")
+    feedCache.set(cacheKey, { expiresAt: persistentSnapshotExpiresAt, payload })
+    return json(200, payload)
   }
 
   const guardianKey = Deno.env.get("GUARDIAN_API_KEY") ?? ""
@@ -751,7 +863,7 @@ Deno.serve(async (request) => {
     return json(200, payload)
   }
 
-  const results = await poolMap(tasks, 6, async (task): Promise<ProviderTaskResult> => {
+  const results = await poolMap(tasks, providerConcurrency, async (task): Promise<ProviderTaskResult> => {
     try {
       const articles = await task.run()
       return {
@@ -782,6 +894,24 @@ Deno.serve(async (request) => {
   }))
   const errors = diagnostics.filter((diagnostic) => diagnostic.error).length
 
+  if (finalArticles.length === 0 && cached) {
+    return json(200, {
+      ...cached.payload,
+      source: "cached",
+      cacheHit: true,
+      message: "Showing cached brief while live providers recover.",
+      providerDiagnostics: diagnostics,
+    } satisfies FeedResponse)
+  }
+
+  if (finalArticles.length === 0 && persistentSnapshot) {
+    const payload = responseFromSnapshot(persistentSnapshot, "Showing cached brief while live providers recover.")
+    return json(200, {
+      ...payload,
+      providerDiagnostics: diagnostics,
+    } satisfies FeedResponse)
+  }
+
   const payload: FeedResponse = {
     generatedAt: new Date().toISOString(),
     source: finalArticles.length ? "live" : "empty",
@@ -794,5 +924,6 @@ Deno.serve(async (request) => {
   }
 
   feedCache.set(cacheKey, { expiresAt: now + ttlSeconds * 1000, payload })
+  await writeFeedSnapshot(cacheKey, payload, ttlSeconds)
   return json(200, payload)
 })
