@@ -6,6 +6,7 @@ enum AppNotifications {
     static let savedArticlesDidChange = Notification.Name("savedArticlesDidChange")
     static let appliedJobsDidChange = Notification.Name("appliedJobsDidChange")
     static let remoteNotificationTokenDidChange = Notification.Name("remoteNotificationTokenDidChange")
+    static let remoteNotificationWasOpened = Notification.Name("remoteNotificationWasOpened")
 }
 
 enum JobActivityEventType: String {
@@ -24,6 +25,7 @@ struct NotificationPreferences: Codable, Equatable {
     var sportsEnabled: Bool
     var readingGoalEnabled: Bool
     var dailyBriefTime: String
+    var timezone: String
 
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"
@@ -33,17 +35,52 @@ struct NotificationPreferences: Codable, Equatable {
         case sportsEnabled = "sports_enabled"
         case readingGoalEnabled = "reading_goal_enabled"
         case dailyBriefTime = "daily_brief_time"
+        case timezone
+    }
+
+    init(
+        userID: UUID? = nil,
+        dailyBriefEnabled: Bool,
+        breakingNewsEnabled: Bool,
+        jobsEnabled: Bool,
+        sportsEnabled: Bool,
+        readingGoalEnabled: Bool,
+        dailyBriefTime: String,
+        timezone: String = TimeZone.autoupdatingCurrent.identifier
+    ) {
+        self.userID = userID
+        self.dailyBriefEnabled = dailyBriefEnabled
+        self.breakingNewsEnabled = breakingNewsEnabled
+        self.jobsEnabled = jobsEnabled
+        self.sportsEnabled = sportsEnabled
+        self.readingGoalEnabled = readingGoalEnabled
+        self.dailyBriefTime = dailyBriefTime
+        self.timezone = timezone
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userID = try container.decodeIfPresent(UUID.self, forKey: .userID)
+        dailyBriefEnabled = try container.decode(Bool.self, forKey: .dailyBriefEnabled)
+        breakingNewsEnabled = try container.decode(Bool.self, forKey: .breakingNewsEnabled)
+        jobsEnabled = try container.decode(Bool.self, forKey: .jobsEnabled)
+        sportsEnabled = try container.decode(Bool.self, forKey: .sportsEnabled)
+        readingGoalEnabled = try container.decode(Bool.self, forKey: .readingGoalEnabled)
+        dailyBriefTime = try container.decode(String.self, forKey: .dailyBriefTime)
+        timezone = try container.decodeIfPresent(String.self, forKey: .timezone)
+            ?? TimeZone.autoupdatingCurrent.identifier
     }
 
     static func defaults(userID: UUID? = nil) -> NotificationPreferences {
         NotificationPreferences(
             userID: userID,
             dailyBriefEnabled: true,
-            breakingNewsEnabled: false,
+            breakingNewsEnabled: true,
             jobsEnabled: true,
             sportsEnabled: false,
             readingGoalEnabled: false,
-            dailyBriefTime: "08:00:00"
+            dailyBriefTime: "08:00:00",
+            timezone: TimeZone.autoupdatingCurrent.identifier
         )
     }
 }
@@ -176,6 +213,7 @@ final class NotificationService {
 
         var payload = preferences
         payload.userID = session.userID
+        payload.timezone = TimeZone.autoupdatingCurrent.identifier
 
         var request = authedRequest(url: url, session: session)
         request.httpMethod = "POST"
@@ -216,7 +254,7 @@ final class NotificationService {
             return
         }
 
-        var components = URLComponents(url: baseURL.appending(path: "/rest/v1/job_activity_events"), resolvingAgainstBaseURL: false)
+        let components = URLComponents(url: baseURL.appending(path: "/rest/v1/job_activity_events"), resolvingAgainstBaseURL: false)
         guard let url = components?.url else { return }
 
         var request = authedRequest(url: url, session: session)

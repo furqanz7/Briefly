@@ -1,6 +1,7 @@
 import GoogleMobileAds
 import SwiftUI
 import UIKit
+import UserNotifications
 
 @main
 struct BrieflyApp: App {
@@ -35,11 +36,22 @@ struct BrieflyApp: App {
                 .onReceive(NotificationCenter.default.publisher(for: AppNotifications.remoteNotificationTokenDidChange)) { _ in
                     appState.syncNotificationDevice()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: AppNotifications.remoteNotificationWasOpened)) { notification in
+                    appState.handleNotificationUserInfo(notification.userInfo ?? [:])
+                }
         }
     }
 }
 
-final class BrieflyAppDelegate: NSObject, UIApplicationDelegate {
+final class BrieflyAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+
     func application(
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
@@ -56,5 +68,23 @@ final class BrieflyAppDelegate: NSObject, UIApplicationDelegate {
         #if DEBUG
         print("[Push] Registration failed: \(error.localizedDescription)")
         #endif
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .sound, .badge]
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        NotificationCenter.default.post(
+            name: AppNotifications.remoteNotificationWasOpened,
+            object: nil,
+            userInfo: response.notification.request.content.userInfo
+        )
     }
 }

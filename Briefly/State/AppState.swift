@@ -1,5 +1,13 @@
 import Foundation
 
+enum AppTab: String, Hashable {
+    case home
+    case sports
+    case jobs
+    case books
+    case more
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var session: UserSession?
@@ -7,6 +15,8 @@ final class AppState: ObservableObject {
     @Published var isBootstrapping = true
     @Published var authNotice: String?
     @Published var passwordRecoverySession: PasswordRecoverySession?
+    @Published var selectedTab: AppTab = .home
+    @Published var pendingNotificationArticle: Article?
 
     private let authService = AuthService()
 
@@ -139,6 +149,30 @@ final class AppState: ObservableObject {
         }
     }
 
+    func handleNotificationUserInfo(_ userInfo: [AnyHashable: Any]) {
+        completeWelcome()
+
+        let route = stringValue("route", in: userInfo)
+            ?? stringValue("type", in: userInfo)
+            ?? stringValue("notification_type", in: userInfo)
+
+        switch route {
+        case "job_match", "jobs":
+            selectedTab = .jobs
+        case "sports_live", "sports":
+            selectedTab = .sports
+        case "reading_goal", "books":
+            selectedTab = .books
+        case "breaking_essential", "article":
+            selectedTab = .home
+            pendingNotificationArticle = article(from: userInfo)
+        case "daily_brief", "home":
+            selectedTab = .home
+        default:
+            selectedTab = .home
+        }
+    }
+
     private func passwordRecoverySession(from url: URL) -> PasswordRecoverySession? {
         guard isPasswordRecoveryURL(url) else { return nil }
         let parameters = callbackParameters(from: url)
@@ -188,5 +222,85 @@ final class AppState: ObservableObject {
             }
         }
         return parameters
+    }
+
+    private func article(from userInfo: [AnyHashable: Any]) -> Article? {
+        guard let headline = stringValue("headline", in: userInfo),
+              !headline.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        let category = stringValue("category", in: userInfo) ?? "World"
+        let categories = stringArrayValue("categories", in: userInfo)
+            .compactMap(NewsCategory.init(providerValue:))
+
+        return Article(
+            id: stringValue("article_id", in: userInfo)
+                ?? stringValue("id", in: userInfo)
+                ?? headline,
+            headline: headline,
+            source: stringValue("source", in: userInfo) ?? "Briefly",
+            imageURL: urlValue(["image_url", "imageURL"], in: userInfo),
+            originalURL: urlValue(["original_url", "originalURL", "url"], in: userInfo),
+            publishedAt: dateValue(["published_at", "publishedAt"], in: userInfo),
+            summaryCards: stringArrayValue("summary_cards", in: userInfo)
+                .ifEmpty([stringValue("plain_summary", in: userInfo)].compactMap { $0 }),
+            plainSummary: stringValue("plain_summary", in: userInfo)
+                ?? stringValue("plainSummary", in: userInfo)
+                ?? "",
+            rawDescription: stringValue("raw_description", in: userInfo)
+                ?? stringValue("rawDescription", in: userInfo)
+                ?? "",
+            rawContent: stringValue("raw_content", in: userInfo)
+                ?? stringValue("rawContent", in: userInfo)
+                ?? "",
+            category: category,
+            categories: categories.isEmpty ? nil : categories,
+            keywords: stringArrayValue("keywords", in: userInfo)
+        )
+    }
+
+    private func stringValue(_ key: String, in userInfo: [AnyHashable: Any]) -> String? {
+        if let value = userInfo[AnyHashable(key)] as? String {
+            return value
+        }
+        if let value = userInfo[AnyHashable(key)] {
+            return String(describing: value)
+        }
+        return nil
+    }
+
+    private func stringArrayValue(_ key: String, in userInfo: [AnyHashable: Any]) -> [String] {
+        if let values = userInfo[AnyHashable(key)] as? [String] {
+            return values
+        }
+        if let values = userInfo[AnyHashable(key)] as? [Any] {
+            return values.compactMap { $0 as? String ?? String(describing: $0) }
+        }
+        if let value = stringValue(key, in: userInfo), !value.isEmpty {
+            return value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        }
+        return []
+    }
+
+    private func urlValue(_ keys: [String], in userInfo: [AnyHashable: Any]) -> URL? {
+        keys.lazy
+            .compactMap { self.stringValue($0, in: userInfo) }
+            .compactMap { URL(string: $0) }
+            .first
+    }
+
+    private func dateValue(_ keys: [String], in userInfo: [AnyHashable: Any]) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        return keys.lazy
+            .compactMap { self.stringValue($0, in: userInfo) }
+            .compactMap { formatter.date(from: $0) }
+            .first
+    }
+}
+
+private extension Array {
+    func ifEmpty(_ fallback: [Element]) -> [Element] {
+        isEmpty ? fallback : self
     }
 }

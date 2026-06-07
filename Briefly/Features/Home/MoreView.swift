@@ -77,7 +77,7 @@ struct MoreView: View {
                 MoreDestinationRow(
                     icon: "bell.badge.fill",
                     title: "Notifications",
-                    subtitle: appState.session == nil ? "Sign in to enable alerts" : "Job alerts based on recent activity",
+                    subtitle: appState.session == nil ? "Sign in to enable alerts" : "Personal alerts across Briefly",
                     tint: BrieflyTheme.accentBlue
                 )
             }
@@ -154,6 +154,7 @@ private struct NotificationSettingsView: View {
             Task { await load() }
         }
         .onChange(of: preferences.dailyBriefEnabled) { savePreferences() }
+        .onChange(of: preferences.breakingNewsEnabled) { savePreferences() }
         .onChange(of: preferences.jobsEnabled) { savePreferences() }
         .onChange(of: preferences.sportsEnabled) { savePreferences() }
         .onChange(of: preferences.readingGoalEnabled) { savePreferences() }
@@ -248,6 +249,14 @@ private struct NotificationSettingsView: View {
                 subtitle: "A quiet reminder when your fresh brief is ready.",
                 tint: BrieflyTheme.accentBlue,
                 isOn: $preferences.dailyBriefEnabled
+            )
+
+            NotificationToggleRow(
+                icon: "exclamationmark.triangle.fill",
+                title: "Breaking Essentials",
+                subtitle: "Only high-priority world, conflict, and politics stories.",
+                tint: .red,
+                isOn: $preferences.breakingNewsEnabled
             )
 
             NotificationToggleRow(

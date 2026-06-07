@@ -149,6 +149,9 @@ verify_jwt = false
 [functions.job-alerts]
 verify_jwt = false
 
+[functions.notification-dispatcher]
+verify_jwt = false
+
 [functions.books-data]
 verify_jwt = false
 

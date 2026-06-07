@@ -926,8 +926,12 @@ private struct LiveMatchDetailView: View {
     @State private var isRefreshingDetail = false
     @State private var detailError: String?
     @State private var didPinWidgetMatch = false
+    @State private var didFollowMatchTeams = false
+    @State private var isFollowingTeams = false
+    @State private var followNotice: String?
     @State private var authPrompt: AuthPrompt?
     private let sportsService = SportsService()
+    private let followedSportsService = FollowedSportsService()
 
     init(match: LiveMatch) {
         self.match = match
@@ -1061,6 +1065,47 @@ private struct LiveMatchDetailView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Show this match on the Sports widget")
 
+                    Button {
+                        Task { await followMatchTeams() }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: didFollowMatchTeams ? "bell.badge.fill" : "bell.fill")
+                                .font(.system(size: 15, weight: .heavy))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(didFollowMatchTeams ? "Live alerts enabled" : "Follow teams for live alerts")
+                                    .font(.system(size: 14, weight: .heavy))
+                                    .foregroundStyle(BrieflyTheme.primaryText)
+
+                                Text(followNotice ?? "Briefly will use these teams for targeted Sports alerts.")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(BrieflyTheme.secondaryText)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.75)
+                            }
+
+                            Spacer(minLength: 8)
+
+                            if isFollowingTeams {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(BrieflyTheme.accentBlue)
+                            }
+                        }
+                        .foregroundStyle(didFollowMatchTeams ? .green : BrieflyTheme.accentBlue)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background((didFollowMatchTeams ? Color.green : BrieflyTheme.accentBlue).opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .stroke((didFollowMatchTeams ? Color.green : BrieflyTheme.accentBlue).opacity(0.28), lineWidth: 1)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isFollowingTeams)
+                    .accessibilityLabel("Follow teams for Sports notifications")
+
                     if isLoadingDetail && scoreboardSections.isEmpty {
                         ProgressView("Loading scoreboard")
                             .tint(BrieflyTheme.accent)
@@ -1180,6 +1225,30 @@ private struct LiveMatchDetailView: View {
             if Task.isCancelled { break }
             guard shouldAutoRefreshDetail else { break }
             await loadDetail(force: true)
+        }
+    }
+
+    private func followMatchTeams() async {
+        guard !isFollowingTeams else { return }
+        guard let session = appState.session else {
+            authPrompt = AuthPrompt(
+                title: "Sign in to follow teams",
+                message: "Briefly uses followed teams to send focused Sports alerts instead of broad sports spam."
+            )
+            return
+        }
+
+        isFollowingTeams = true
+        defer { isFollowingTeams = false }
+
+        do {
+            try await followedSportsService.followTeams(from: detailMatch, session: session)
+            didFollowMatchTeams = true
+            followNotice = "Sports alerts will watch \(detailMatch.homeName) and \(detailMatch.awayName)."
+            Haptics.success()
+        } catch {
+            followNotice = "Could not follow these teams yet."
+            Haptics.error()
         }
     }
 

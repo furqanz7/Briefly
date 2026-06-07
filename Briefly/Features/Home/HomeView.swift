@@ -88,6 +88,11 @@ struct HomeView: View {
                 .onChange(of: viewModel.searchText) { _, _ in
                     viewModel.handleSearchTextChange()
                 }
+                .onChange(of: appState.pendingNotificationArticle) { _, article in
+                    guard let article else { return }
+                    selectedArticle = article
+                    appState.pendingNotificationArticle = nil
+                }
                 .onReceive(carouselTimer) { _ in
                     // Disabled: auto-advancing a paged carousel while the user is scrolling is a major jank source.
                     // We can reintroduce this later with interaction-aware pausing, but stability first.

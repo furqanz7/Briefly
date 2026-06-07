@@ -1,34 +1,40 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        TabView {
+        TabView(selection: $appState.selectedTab) {
             HomeView()
                 .tabItem {
                     Label("Home", systemImage: "house.fill")
                 }
+                .tag(AppTab.home)
 
             SportsView()
                 .tabItem {
                     Label("Sports", systemImage: "sportscourt.fill")
                 }
+                .tag(AppTab.sports)
 
             JobsView()
                 .tabItem {
                     Label("Jobs", systemImage: "briefcase.fill")
                 }
+                .tag(AppTab.jobs)
 
             BooksView()
                 .tabItem {
                     Label("Books", systemImage: "books.vertical.fill")
                 }
+                .tag(AppTab.books)
 
             MoreView()
                 .tabItem {
                     Label("More", systemImage: "ellipsis")
                 }
+                .tag(AppTab.more)
         }
         .background {
             BrieflyTheme.premiumBackground
