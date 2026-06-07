@@ -58,6 +58,7 @@ final class JobsViewModel: ObservableObject {
     private let service: JobsProviding
     private let savedStore: LocalSavedJobsStore
     private let savedService: SavedJobsService
+    private let notificationService = NotificationService.shared
     private let defaultQuery = "ios developer remote"
     private let jobsCacheMaxAge: TimeInterval = 12 * 60 * 60
     let quickSearches = ["iOS", "Backend", "Product", "Design", "Remote"]
@@ -133,6 +134,7 @@ final class JobsViewModel: ObservableObject {
         errorMessage = nil
         providerMessage = nil
         passedJobs = []
+        recordJobActivity(.search, job: nil, session: session)
         do {
             let response = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
             jobs = response.jobs
@@ -165,6 +167,7 @@ final class JobsViewModel: ObservableObject {
         savedJobs.insert(job, at: 0)
         savedStore.save(job, userID: session.userID)
         syncWidgetSnapshot()
+        recordJobActivity(.save, job: job, session: session)
         do {
             try await savedService.save(job: job, session: session)
         } catch {
@@ -172,11 +175,12 @@ final class JobsViewModel: ObservableObject {
         }
     }
 
-    func passCurrent() {
+    func passCurrent(session: UserSession? = nil) {
         guard let job = currentJob else { return }
         if !passedJobs.contains(job) {
             passedJobs.append(job)
         }
+        recordJobActivity(.pass, job: job, session: session)
     }
 
     func restoreDeck() {
@@ -210,6 +214,7 @@ final class JobsViewModel: ObservableObject {
         appliedJobs.insert(job, at: 0)
         savedStore.markApplied(job, userID: session.userID)
         syncWidgetSnapshot()
+        recordJobActivity(.apply, job: job, session: session)
         do {
             try await savedService.markApplied(job: job, session: session)
         } catch {
@@ -222,8 +227,9 @@ final class JobsViewModel: ObservableObject {
         appliedJobs.contains { $0.id == job.id }
     }
 
-    func open(_ job: JobListing) {
+    func open(_ job: JobListing, session: UserSession? = nil) {
         selectedJob = job
+        recordJobActivity(.open, job: job, session: session)
         Task {
             await loadDetail(for: job)
         }
@@ -310,6 +316,22 @@ final class JobsViewModel: ObservableObject {
 
         jobs = cached.value
         providerMessage = "Showing saved job matches while refreshing."
+    }
+
+    private func recordJobActivity(_ eventType: JobActivityEventType, job: JobListing?, session: UserSession?) {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let country = selectedCountry.rawValue
+        let deck = selectedFilter.rawValue
+        Task {
+            await notificationService.recordJobActivity(
+                eventType,
+                job: job,
+                query: query,
+                country: country,
+                deck: deck,
+                session: session
+            )
+        }
     }
 
     private var filteredJobs: [JobListing] {

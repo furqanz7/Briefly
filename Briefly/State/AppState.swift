@@ -28,11 +28,13 @@ final class AppState: ObservableObject {
         if let storedSession = authService.restoreSession() {
             session = storedSession
             isBootstrapping = false
+            syncNotificationDevice()
 
             Task {
                 guard let refreshed = try? await authService.refreshSession(storedSession) else { return }
                 if session?.userID == storedSession.userID {
                     session = refreshed
+                    syncNotificationDevice()
                 }
             }
             return
@@ -48,18 +50,21 @@ final class AppState: ObservableObject {
     func signIn(email: String, password: String) async throws {
         session = try await authService.signIn(email: email, password: password)
         authNotice = nil
+        syncNotificationDevice()
         Haptics.success()
     }
 
     func signUp(email: String, password: String) async throws {
         session = try await authService.signUp(email: email, password: password)
         authNotice = nil
+        syncNotificationDevice()
         Haptics.success()
     }
 
     func signInWithApple(idToken: String, nonce: String) async throws {
         session = try await authService.signInWithApple(idToken: idToken, nonce: nonce)
         authNotice = nil
+        syncNotificationDevice()
         Haptics.success()
     }
 
@@ -104,6 +109,7 @@ final class AppState: ObservableObject {
             throw APIError.server("No active account to delete.")
         }
 
+        try? await NotificationService.shared.disableDevice(session: session)
         try await authService.deleteAccount(session: session)
         authNotice = "Your account was permanently deleted."
         self.session = nil
@@ -112,10 +118,25 @@ final class AppState: ObservableObject {
     }
 
     func signOut() {
+        let currentSession = session
         authService.signOut()
         Haptics.selection()
         session = nil
         WidgetSnapshotStore.clearAccountWidgets()
+
+        if let currentSession {
+            Task {
+                try? await NotificationService.shared.disableDevice(session: currentSession)
+            }
+        }
+    }
+
+    func syncNotificationDevice() {
+        guard let session else { return }
+        Task {
+            try? await NotificationService.shared.syncDeviceToken(session: session)
+            try? await NotificationService.shared.ensurePreferences(session: session)
+        }
     }
 
     private func passwordRecoverySession(from url: URL) -> PasswordRecoverySession? {

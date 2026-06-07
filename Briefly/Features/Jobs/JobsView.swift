@@ -327,10 +327,10 @@ struct JobsView: View {
                                     requireAccount(
                                         title: "Sign in to pass jobs",
                                         message: "Sign in before passing roles so your job deck can stay consistent.",
-                                        action: viewModel.passCurrent
+                                        action: { viewModel.passCurrent(session: appState.session) }
                                     )
                                 },
-                                onOpen: { viewModel.open(job) }
+                                onOpen: { viewModel.open(job, session: appState.session) }
                             )
                             .allowsHitTesting(true)
                         } else {
@@ -348,14 +348,14 @@ struct JobsView: View {
                             message: "Sign in before passing roles so your job deck can stay consistent."
                         ) {
                             withAnimation(.spring(response: 0.36, dampingFraction: 0.86)) {
-                                viewModel.passCurrent()
+                                viewModel.passCurrent(session: appState.session)
                             }
                         }
                     }
 
                     JobsActionButton(icon: "info.circle.fill", tint: BrieflyTheme.accentBlue) {
                         if let job = viewModel.currentJob {
-                            viewModel.open(job)
+                            viewModel.open(job, session: appState.session)
                         }
                     }
 
@@ -391,7 +391,7 @@ struct JobsView: View {
                         ForEach(viewModel.visibleJobs) { job in
                             SavedJobRow(
                                 job: job,
-                                onOpen: { viewModel.open(job) },
+                                onOpen: { viewModel.open(job, session: appState.session) },
                                 onRemove: { Task { await viewModel.removeSaved(job, session: appState.session) } }
                             )
                         }

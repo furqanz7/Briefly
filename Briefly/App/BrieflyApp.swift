@@ -1,8 +1,10 @@
 import GoogleMobileAds
 import SwiftUI
+import UIKit
 
 @main
 struct BrieflyApp: App {
+    @UIApplicationDelegateAdaptor(BrieflyAppDelegate.self) private var appDelegate
     @StateObject private var appState = AppState()
     @StateObject private var theme = ThemeManager()
 
@@ -30,6 +32,29 @@ struct BrieflyApp: App {
                 .onOpenURL { url in
                     appState.handleIncomingURL(url)
                 }
+                .onReceive(NotificationCenter.default.publisher(for: AppNotifications.remoteNotificationTokenDidChange)) { _ in
+                    appState.syncNotificationDevice()
+                }
         }
+    }
+}
+
+final class BrieflyAppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+        NotificationService.shared.storeDeviceToken(token)
+        NotificationCenter.default.post(name: AppNotifications.remoteNotificationTokenDidChange, object: nil)
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        #if DEBUG
+        print("[Push] Registration failed: \(error.localizedDescription)")
+        #endif
     }
 }
