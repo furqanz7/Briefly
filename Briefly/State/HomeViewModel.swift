@@ -154,6 +154,11 @@ final class HomeViewModel: ObservableObject {
                 excludingIDs: force ? previousIDs : []
             )
 
+            guard !articles.isEmpty || allArticles.isEmpty else {
+                errorMessage = nil
+                return
+            }
+
             if force, !previousIDs.isEmpty {
                 let incomingIDs = Set(articles.map(\.id))
                 let retained = allArticles.filter { !incomingIDs.contains($0.id) }
@@ -182,6 +187,11 @@ final class HomeViewModel: ObservableObject {
             await refreshSearchResults()
         } catch {
             if isCancellation(error) {
+                errorMessage = nil
+                return
+            }
+
+            guard allArticles.isEmpty else {
                 errorMessage = nil
                 return
             }

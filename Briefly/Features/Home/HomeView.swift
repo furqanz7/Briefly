@@ -29,9 +29,6 @@ struct HomeView: View {
                         if isSearchVisible {
                             searchBar
                         }
-                        if !viewModel.availableCategories.isEmpty {
-                            categoryChips
-                        }
                         if viewModel.isLoading && viewModel.allArticles.isEmpty {
                             loadingState
                         } else if isSearching {
@@ -47,8 +44,7 @@ struct HomeView: View {
                             marketSection
                             cryptoSection
                             liveNowSection
-                            featuredCarousel
-                            picksSection
+                            filteredNewsSection
                         }
                     }
                     .padding(.horizontal, 20)
@@ -277,6 +273,17 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                 }
             }
+        }
+    }
+
+    private var filteredNewsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if !viewModel.availableCategories.isEmpty {
+                categoryChips
+            }
+
+            featuredCarousel
+            picksSection
         }
     }
 

@@ -62,6 +62,15 @@ private struct NewYorkTimesResponse: Decodable {
 
 private struct NewYorkTimesDocsEnvelope: Decodable {
     let docs: [NewYorkTimesArticleDTO]
+
+    enum CodingKeys: String, CodingKey {
+        case docs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        docs = try container.decodeIfPresent([NewYorkTimesArticleDTO].self, forKey: .docs) ?? []
+    }
 }
 
 private struct NewYorkTimesArticleDTO: Decodable {

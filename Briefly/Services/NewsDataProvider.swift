@@ -62,7 +62,6 @@ struct NewsDataProvider: NewsProvider {
             .init(name: "language", value: "en"),
             .init(name: "prioritydomain", value: "top"),
             .init(name: "removeduplicate", value: "1"),
-            .init(name: "timeframe", value: "24"),
             .init(name: "size", value: "\(plan.size)")
         ]
 
