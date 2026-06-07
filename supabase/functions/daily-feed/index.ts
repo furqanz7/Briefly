@@ -774,7 +774,7 @@ Deno.serve(async (request) => {
   const categories: NewsCategory[] = ["world", "politics", "conflict", "technology", "business", "sports"]
   const fromDate = startOfDayISO(new Date())
 
-  const cacheKey = `${fromDate}|${lang}|${country}|${desiredCount}`
+  const cacheKey = `${fromDate}|${lang}|global|${desiredCount}`
   const now = Date.now()
   const cached = feedCache.get(cacheKey)
   const hasFreshCache = cached && cached.expiresAt > now
