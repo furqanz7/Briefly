@@ -85,7 +85,7 @@ struct MediastackProvider: NewsProvider {
 
         var request = URLRequest(url: url)
         request.cachePolicy = forceRefresh ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy
-        request.timeoutInterval = 30
+        request.timeoutInterval = 12
 
         let (data, http) = try await HTTPClient.data(for: request)
         let okData = try HTTPClient.requireSuccess(data, http)

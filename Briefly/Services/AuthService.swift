@@ -18,6 +18,7 @@ struct AuthService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 12
         request.setValue(config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -141,6 +142,7 @@ struct AuthService {
     ) async throws {
         var request = URLRequest(url: url)
         request.httpMethod = method
+        request.timeoutInterval = 12
         request.setValue(config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         let authToken = authorizationToken ?? config.supabaseAnonKey
         request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
@@ -160,6 +162,7 @@ struct AuthService {
     private func post<T: Decodable>(url: URL, body: [String: Any], authorizationToken: String? = nil) async throws -> T {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 12
         request.setValue(config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         let authToken = authorizationToken ?? config.supabaseAnonKey
         request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")

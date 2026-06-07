@@ -126,11 +126,10 @@ final class HomeViewModel: ObservableObject {
             savedIDs = []
         }
 
-        if !force {
-            hydrateCachedFeedIfNeeded(desiredCount: desiredCount)
-        }
+        let didHydrateFromCache = !force && hydrateCachedFeedIfNeeded(desiredCount: desiredCount)
 
         if !force,
+           !didHydrateFromCache,
            !allArticles.isEmpty,
            let lastUpdatedAt,
            Date().timeIntervalSince(lastUpdatedAt) < autoRefreshInterval {
@@ -178,7 +177,7 @@ final class HomeViewModel: ObservableObject {
                 await loadTrendingCryptoSnapshotsIfNeeded()
                 await loadCryptoMoversIfNeeded()
             }
-            await loadSavedIDsIfNeeded(session: session)
+            Task { await loadSavedIDsIfNeeded(session: session) }
             errorMessage = nil
             await refreshSearchResults()
         } catch {
@@ -332,11 +331,11 @@ final class HomeViewModel: ObservableObject {
         await refreshSearchResults()
     }
 
-    private func hydrateCachedFeedIfNeeded(desiredCount: Int) {
+    private func hydrateCachedFeedIfNeeded(desiredCount: Int) -> Bool {
         guard allArticles.isEmpty,
               let cached = AppFeedCache.load([Article].self, key: feedCacheKey, maxAge: feedCacheMaxAge),
               !cached.value.isEmpty else {
-            return
+            return false
         }
 
         allArticles = Array(cached.value.prefix(max(desiredCount, desiredFeedCount)))
@@ -344,6 +343,7 @@ final class HomeViewModel: ObservableObject {
         lastUpdatedAt = cached.storedAt
         searchResult = .articles(applyCategoryFilter(defaultPickSource))
         WidgetSnapshotStore.saveNews(allArticles)
+        return true
     }
 
     private func dedupeArticles(_ articles: [Article]) -> [Article] {

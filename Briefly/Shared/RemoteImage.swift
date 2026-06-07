@@ -45,7 +45,7 @@ enum RemoteImagePreheater {
                         }
 
                         do {
-                            let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 20)
+                            let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 12)
                             let (data, _) = try await URLSession.shared.data(for: request)
                             let decoded = try await Task.detached(priority: .utility) {
                                 try downsampleImage(data: data, targetPixelSize: targetPixelSize)
@@ -190,7 +190,7 @@ private final class DownsampledImageLoader: ObservableObject {
         }
 
         do {
-            let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 20)
+            let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 12)
             let (data, _) = try await URLSession.shared.data(for: request)
             let decoded = try await Task.detached(priority: .utility) {
                 try downsampleImage(data: data, targetPixelSize: targetPixelSize)

@@ -2,6 +2,11 @@ import Foundation
 
 enum HTTPClient {
     static func data(for request: URLRequest, session: URLSession = .shared) async throws -> (Data, HTTPURLResponse) {
+        var request = request
+        if request.timeoutInterval >= 60 {
+            request.timeoutInterval = 12
+        }
+
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
@@ -19,4 +24,3 @@ enum HTTPClient {
         return data
     }
 }
-

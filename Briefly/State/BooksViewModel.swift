@@ -68,7 +68,8 @@ final class BooksViewModel: ObservableObject {
     func load(session: UserSession?) async {
         guard books.isEmpty else { return }
         hydrateCachedBooksIfNeeded()
-        await loadAccountBackedLibrary(session: session)
+        hydrateLocalLibrary(session: session)
+        Task { await loadAccountBackedLibrary(session: session) }
         await search()
     }
 
@@ -201,6 +202,28 @@ final class BooksViewModel: ObservableObject {
 
     private func syncWidgetSnapshot() {
         WidgetSnapshotStore.saveBooks(savedBooks: savedBooks, downloadedIDs: downloadedIDs, readingSummary: readingSummary)
+    }
+
+    private func hydrateLocalLibrary(session: UserSession?) {
+        guard let session else {
+            savedBooks = []
+            downloadedIDs = []
+            readingSummary = ReadingSummary()
+            syncWidgetSnapshot()
+            return
+        }
+
+        savedBooks = store.savedBooks(userID: session.userID)
+        downloadedIDs = store.downloadedIDs(userID: session.userID)
+        readingSummary = ReadingSummary(
+            todaySeconds: store.readingSeconds(userID: session.userID),
+            weekSeconds: store.readingSeconds(userID: session.userID),
+            monthSeconds: store.readingSeconds(userID: session.userID),
+            overallSeconds: store.readingSeconds(userID: session.userID),
+            dailyGoalMinutes: store.readingGoalMinutes(userID: session.userID),
+            hasCustomGoal: store.hasReadingGoal(userID: session.userID)
+        )
+        syncWidgetSnapshot()
     }
 
     private var booksCacheKey: String {

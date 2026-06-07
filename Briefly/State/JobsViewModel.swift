@@ -104,10 +104,11 @@ final class JobsViewModel: ObservableObject {
     func load(session: UserSession?) async {
         guard jobs.isEmpty else { return }
         hydrateCachedJobsIfNeeded()
+        hydrateLocalAccountBackedJobs(session: session)
+        Task { await loadAccountBackedJobs(session: session) }
         isLoading = jobs.isEmpty
         errorMessage = nil
         providerMessage = nil
-        await loadAccountBackedJobs(session: session)
         do {
             let response = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
             jobs = response.jobs
@@ -126,11 +127,12 @@ final class JobsViewModel: ObservableObject {
 
     func search(session: UserSession?) async {
         hydrateCachedJobsIfNeeded()
+        hydrateLocalAccountBackedJobs(session: session)
+        Task { await loadAccountBackedJobs(session: session) }
         isLoading = jobs.isEmpty
         errorMessage = nil
         providerMessage = nil
         passedJobs = []
-        await loadAccountBackedJobs(session: session)
         do {
             let response = try await service.fetchJobs(query: activeQuery, country: selectedCountry.providerCode)
             jobs = response.jobs
@@ -279,6 +281,19 @@ final class JobsViewModel: ObservableObject {
 
     private func syncWidgetSnapshot() {
         WidgetSnapshotStore.saveJobs(saved: savedJobs, applied: appliedJobs)
+    }
+
+    private func hydrateLocalAccountBackedJobs(session: UserSession?) {
+        guard let session else {
+            savedJobs = []
+            appliedJobs = []
+            syncWidgetSnapshot()
+            return
+        }
+
+        savedJobs = savedStore.fetch(userID: session.userID)
+        appliedJobs = savedStore.fetchApplied(userID: session.userID)
+        syncWidgetSnapshot()
     }
 
     private var jobsCacheKey: String {

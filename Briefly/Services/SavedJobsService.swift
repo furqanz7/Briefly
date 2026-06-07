@@ -94,6 +94,7 @@ struct SavedJobsService {
 
     private func authedRequest(url: URL, session: UserSession) -> URLRequest {
         var request = URLRequest(url: url)
+        request.timeoutInterval = 8
         request.setValue(config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

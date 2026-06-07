@@ -26,7 +26,16 @@ final class AppState: ObservableObject {
         }
 #endif
         if let storedSession = authService.restoreSession() {
-            session = (try? await authService.refreshSession(storedSession)) ?? storedSession
+            session = storedSession
+            isBootstrapping = false
+
+            Task {
+                guard let refreshed = try? await authService.refreshSession(storedSession) else { return }
+                if session?.userID == storedSession.userID {
+                    session = refreshed
+                }
+            }
+            return
         }
         isBootstrapping = false
     }
