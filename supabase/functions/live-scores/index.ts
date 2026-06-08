@@ -2070,10 +2070,10 @@ function parseHypraceDetailID(detailID: string): HypraceDetailID | null {
     ) {
       return {
         kind,
-        seasonId: firstString(record ?? {}, ["seasonId"]),
-        grandPrixId: firstString(record ?? {}, ["grandPrixId"]),
-        raceId: firstString(record ?? {}, ["raceId"]),
-        qualifyingId: firstString(record ?? {}, ["qualifyingId"]),
+        seasonId: firstString(record ?? {}, ["seasonId"]) ?? undefined,
+        grandPrixId: firstString(record ?? {}, ["grandPrixId"]) ?? undefined,
+        raceId: firstString(record ?? {}, ["raceId"]) ?? undefined,
+        qualifyingId: firstString(record ?? {}, ["qualifyingId"]) ?? undefined,
       }
     }
   } catch (_) {
@@ -2160,7 +2160,7 @@ async function fetchOSSportsPerformSoccer(apiKey: string): Promise<LiveSportSect
 function osSportsDetailRows(payload: unknown, prefix: string): ScoreboardRow[] {
   return payloadRecords(payload, ["data", "events", "incidents", "statistics", "stats", "odds", "form", "items", "result"])
     .slice(0, 12)
-    .map((record, index) => {
+    .map((record, index): ScoreboardRow | null => {
       const label = firstString(record, ["name", "title", "type", "incident_type", "market", "period", "team_name"]) ??
         `Item ${index + 1}`
       const value = firstString(record, ["value", "text", "description", "score", "odd", "odds", "result", "minute"])
@@ -2385,7 +2385,7 @@ function rundownRows(payload: unknown, prefix: string): ScoreboardRow[] {
     "results",
   ])
     .slice(0, 18)
-    .map((record, index) => {
+    .map((record, index): ScoreboardRow | null => {
       const label = firstString(record, [
         "name",
         "market_name",
@@ -3484,7 +3484,7 @@ async function fetchBaseball4MLBSchedule(apiKey: string, timezone: string, feed:
 function baseball4Rows(payload: unknown, prefix: string): ScoreboardRow[] {
   return payloadRecords(payload, ["data", "body", "teams", "players", "stats", "game", "boxscore", "plays", "allPlays", "probabilities", "matrix"])
     .slice(0, 80)
-    .map((record, index) => {
+    .map((record, index): ScoreboardRow | null => {
       const label = firstString(record, ["name", "fullName", "playerName", "teamName", "event", "description", "result", "title"]) ??
         firstString(nestedRecord(record, ["player"]) ?? {}, ["fullName", "name"]) ??
         firstString(nestedRecord(record, ["team"]) ?? {}, ["name", "teamName"]) ??
